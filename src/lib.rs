@@ -44,7 +44,7 @@ pub fn render_blocks_as_markdown(blocks: Vec<SlackBlock>) -> String {
         .map(|block| match block {
             SlackBlock::Section(section) => render_section_block_as_markdown(section),
             SlackBlock::Header(header) => render_header_block_as_markdown(header),
-            SlackBlock::Divider(_) => "---".to_string(),
+            SlackBlock::Divider(_) => "---\n".to_string(),
             SlackBlock::Image(image) => render_image_block_as_markdown(image),
             SlackBlock::Actions(actions) => render_actions_block_as_markdown(actions),
             SlackBlock::Context(context) => render_context_block_as_markdown(context),
@@ -54,7 +54,7 @@ pub fn render_blocks_as_markdown(blocks: Vec<SlackBlock>) -> String {
             SlackBlock::Event(json_value) => render_event_block_as_markdown(json_value),
         })
         .collect::<Vec<String>>()
-        .join("\n")
+        .join("")
 }
 
 fn render_section_block_as_markdown(section: SlackSectionBlock) -> String {
@@ -67,7 +67,7 @@ fn render_section_block_as_markdown(section: SlackSectionBlock) -> String {
             result.push(render_text_block_as_markdown(field));
         }
     }
-    result.join("\n")
+    result.join("")
 }
 
 fn render_text_block_as_markdown(text: SlackBlockText) -> String {
@@ -99,7 +99,7 @@ fn render_context_block_as_markdown(context: SlackContextBlock) -> String {
             SlackContextBlockElement::MarkDown(markdown) => render_markdown_as_markdown(markdown),
         })
         .collect::<Vec<String>>()
-        .join("\n")
+        .join("")
 }
 
 fn render_image_element_as_markdown(image: SlackBlockImageElement) -> String {
@@ -156,7 +156,7 @@ fn render_rich_text_block_as_markdown(json_value: serde_json::Value) -> String {
                 }
             })
             .collect::<Vec<String>>()
-            .join("\n"),
+            .join(""),
         _ => "".to_string(),
     }
 }
@@ -345,7 +345,7 @@ mod tests {
         ];
         assert_eq!(
             render_blocks_as_markdown(blocks),
-            "![Image](https://example.com/image.png)\n![Image2](https://example.com/image2.png)"
+            "![Image](https://example.com/image.png)![Image2](https://example.com/image2.png)"
                 .to_string()
         );
     }
@@ -356,7 +356,7 @@ mod tests {
             SlackBlock::Divider(SlackDividerBlock::new()),
             SlackBlock::Divider(SlackDividerBlock::new()),
         ];
-        assert_eq!(render_blocks_as_markdown(blocks), "---\n---".to_string());
+        assert_eq!(render_blocks_as_markdown(blocks), "---\n---\n".to_string());
     }
 
     #[test]
@@ -411,7 +411,7 @@ mod tests {
                     SlackBlockPlainText::new("Text2".to_string()),
                 ))),
             ];
-            assert_eq!(render_blocks_as_markdown(blocks), "Text\nText2".to_string());
+            assert_eq!(render_blocks_as_markdown(blocks), "TextText2".to_string());
         }
 
         #[test]
@@ -424,7 +424,7 @@ mod tests {
                     SlackBlockMarkDownText::new("Text2".to_string()),
                 ))),
             ];
-            assert_eq!(render_blocks_as_markdown(blocks), "Text\nText2".to_string());
+            assert_eq!(render_blocks_as_markdown(blocks), "TextText2".to_string());
         }
 
         #[test]
@@ -441,7 +441,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks),
-                "Text11\nText12\nText21\nText22".to_string()
+                "Text11Text12Text21Text22".to_string()
             );
         }
 
@@ -471,7 +471,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks),
-                "Text1\nText11\nText12\nText2\nText21\nText22".to_string()
+                "Text1Text11Text12Text2Text21Text22".to_string()
             );
         }
     }
@@ -493,7 +493,8 @@ mod tests {
             ]))];
             assert_eq!(
                 render_blocks_as_markdown(blocks),
-                "![Image](https://example.com/image.png)\n![Image2](https://example.com/image2.png)".to_string()
+                "![Image](https://example.com/image.png)![Image2](https://example.com/image2.png)"
+                    .to_string()
             );
         }
 
@@ -503,7 +504,7 @@ mod tests {
                 SlackContextBlockElement::Plain(SlackBlockPlainText::new("Text".to_string())),
                 SlackContextBlockElement::Plain(SlackBlockPlainText::new("Text2".to_string())),
             ]))];
-            assert_eq!(render_blocks_as_markdown(blocks), "Text\nText2".to_string());
+            assert_eq!(render_blocks_as_markdown(blocks), "TextText2".to_string());
         }
 
         #[test]
@@ -514,7 +515,7 @@ mod tests {
                     "Text2".to_string(),
                 )),
             ]))];
-            assert_eq!(render_blocks_as_markdown(blocks), "Text\nText2".to_string());
+            assert_eq!(render_blocks_as_markdown(blocks), "TextText2".to_string());
         }
     }
 
@@ -527,7 +528,7 @@ mod tests {
                 SlackBlock::RichText(serde_json::json!({})),
                 SlackBlock::RichText(serde_json::json!({})),
             ];
-            assert_eq!(render_blocks_as_markdown(blocks), "\n".to_string());
+            assert_eq!(render_blocks_as_markdown(blocks), "".to_string());
         }
 
         mod rich_text_section {
@@ -604,8 +605,7 @@ mod tests {
                     ];
                     assert_eq!(
                         render_blocks_as_markdown(blocks),
-                        "Text111Text112\nText121Text122\nText211Text212\nText221Text222"
-                            .to_string()
+                        "Text111Text112Text121Text122Text211Text212Text221Text222".to_string()
                     );
                 }
 
