@@ -1,0 +1,20 @@
+[package]
+name = "slack-blocks-render"
+version = "0.1.0"
+authors = ["David Rousselie <david@rousselie.name>"]
+edition = "2021"
+licence = "Apache-2.0"
+description = "TODO"
+homepage = "https://github.com/dax/slack-blocks-render"
+repository = "https://github.com/dax/slack-blocks-render"
+keywords = ["slack", "markdown", "html"]
+
+[lib]
+# name = "slack-blocks-render"
+path = "src/lib.rs"
+
+[dependencies]
+emojis = "0.6.2"
+serde_json = "1"
+slack-morphism = "2.0"
+url = "2.5"
