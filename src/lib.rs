@@ -282,7 +282,7 @@ fn render_url_as_markdown(url: &str, text: &str) -> String {
 
 fn apply_bold_style(text: String, style: Option<&serde_json::Value>) -> String {
     if is_styled(style, "bold") {
-        format!("**{}**", text)
+        format!("*{}*", text)
     } else {
         text
     }
@@ -298,7 +298,7 @@ fn apply_italic_style(text: String, style: Option<&serde_json::Value>) -> String
 
 fn apply_strike_style(text: String, style: Option<&serde_json::Value>) -> String {
     if is_styled(style, "strike") {
-        format!("~~{}~~", text)
+        format!("~{}~", text)
     } else {
         text
     }
@@ -628,7 +628,7 @@ mod tests {
                             }
                         ]
                     }))];
-                    assert_eq!(render_blocks_as_markdown(blocks), "**Text**".to_string());
+                    assert_eq!(render_blocks_as_markdown(blocks), "*Text*".to_string());
                 }
 
                 #[test]
@@ -672,7 +672,7 @@ mod tests {
                             }
                         ]
                     }))];
-                    assert_eq!(render_blocks_as_markdown(blocks), "~~Text~~".to_string());
+                    assert_eq!(render_blocks_as_markdown(blocks), "~Text~".to_string());
                 }
 
                 #[test]
@@ -718,10 +718,7 @@ mod tests {
                             }
                         ]
                     }))];
-                    assert_eq!(
-                        render_blocks_as_markdown(blocks),
-                        "~~_**Text**_~~".to_string()
-                    );
+                    assert_eq!(render_blocks_as_markdown(blocks), "~_*Text*_~".to_string());
                 }
             }
 
