@@ -173,13 +173,14 @@ fn render_rich_text_list_elements(elements: &Vec<serde_json::Value>, style: &str
     let list_style = if style == "ordered" { "1." } else { "-" };
     elements
         .iter()
-        .map(|element| {
-            format!(
-                "{} {}",
-                list_style,
-                render_rich_text_section_element(element)
-            )
+        .filter_map(|element| {
+            if let Some(serde_json::Value::Array(elements)) = element.get("elements") {
+                Some(render_rich_text_section_elements(elements))
+            } else {
+                None
+            }
         })
+        .map(|element| format!("{list_style} {element}"))
         .collect::<Vec<String>>()
         .join("\n")
 }
@@ -912,12 +913,22 @@ mod tests {
                             "style": "ordered",
                             "elements": [
                                 {
-                                    "type": "text",
-                                    "text": "Text1"
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text1"
+                                        }
+                                    ]
                                 },
                                 {
-                                    "type": "text",
-                                    "text": "Text2"
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text2"
+                                        }
+                                    ]
                                 }
                             ]
                         },
@@ -939,12 +950,22 @@ mod tests {
                             "style": "bullet",
                             "elements": [
                                 {
-                                    "type": "text",
-                                    "text": "Text1"
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text1"
+                                        }
+                                    ]
                                 },
                                 {
-                                    "type": "text",
-                                    "text": "Text2"
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text2"
+                                        }
+                                    ]
                                 }
                             ]
                         },
