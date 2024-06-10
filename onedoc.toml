@@ -1,0 +1,4 @@
+[[doc]]
+input = ["src/lib.rs"]
+output = "README.md"
+template = "docs/README_TEMPLATE.md"
