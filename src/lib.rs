@@ -86,6 +86,7 @@
 //! ```
 pub mod markdown;
 pub mod references;
+pub mod text;
 pub mod visitor;
 
 pub use markdown::render_blocks_as_markdown;
