@@ -13,7 +13,9 @@ keywords = ["slack", "markdown", "html"]
 path = "src/lib.rs"
 
 [dependencies]
+despatma = "0.3.0"
 emojis = "0.6"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1"
-slack-morphism = "2.0"
+slack-morphism = { version = "2.5.0" }
 url = "2.5"
