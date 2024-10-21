@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0](https://github.com/dax/slack-blocks-render/compare/v0.1.1...v0.2.0) - 2024-10-21
+
+### Added
+
+- Resolve Slack user, channel and usergroup ID while rendering
+
 ## [0.1.1](https://github.com/dax/slack-blocks-render/compare/v0.1.0...v0.1.1) - 2024-06-10
 
 ### Fixed
