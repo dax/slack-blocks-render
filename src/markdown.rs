@@ -20,7 +20,7 @@ pub fn render_blocks_as_markdown(
     for block in blocks {
         block_renderer.visit_slack_block(&block);
     }
-    block_renderer.sub_texts.join("")
+    join(block_renderer.sub_texts)
 }
 
 struct MardownRenderer {
@@ -37,11 +37,35 @@ impl MardownRenderer {
     }
 }
 
+fn join(mut texts: Vec<String>) -> String {
+    for i in 0..texts.len() {
+        if i < texts.len() - 1 {
+            if texts[i].ends_with('`') && texts[i + 1].starts_with('`') {
+                texts[i].pop();
+                texts[i + 1].remove(0);
+            }
+            if texts[i].ends_with('~') && texts[i + 1].starts_with('~') {
+                texts[i].pop();
+                texts[i + 1].remove(0);
+            }
+            if texts[i].ends_with('_') && texts[i + 1].starts_with('_') {
+                texts[i].pop();
+                texts[i + 1].remove(0);
+            }
+            if texts[i].ends_with('*') && texts[i + 1].starts_with('*') {
+                texts[i].pop();
+                texts[i + 1].remove(0);
+            }
+        }
+    }
+    texts.join("")
+}
+
 impl Visitor for MardownRenderer {
     fn visit_slack_section_block(&mut self, slack_section_block: &SlackSectionBlock) {
         let mut section_renderer = MardownRenderer::new(self.slack_references.clone());
         visit_slack_section_block(&mut section_renderer, slack_section_block);
-        self.sub_texts.push(section_renderer.sub_texts.join(""));
+        self.sub_texts.push(join(section_renderer.sub_texts));
     }
 
     fn visit_slack_block_plain_text(&mut self, slack_block_plain_text: &SlackBlockPlainText) {
@@ -53,7 +77,7 @@ impl Visitor for MardownRenderer {
         let mut header_renderer = MardownRenderer::new(self.slack_references.clone());
         visit_slack_header_block(&mut header_renderer, slack_header_block);
         self.sub_texts
-            .push(format!("## {}", header_renderer.sub_texts.join("")));
+            .push(format!("## {}", join(header_renderer.sub_texts)));
     }
 
     fn visit_slack_divider_block(&mut self, slack_divider_block: &SlackDividerBlock) {
@@ -107,39 +131,40 @@ fn render_rich_text_block_as_markdown(
     slack_references: &SlackReferences,
 ) -> String {
     match json_value.get("elements") {
-        Some(serde_json::Value::Array(elements)) => elements
-            .iter()
-            .map(|element| {
-                match (
-                    element.get("type").map(|t| t.as_str()),
-                    element.get("style"),
-                    element.get("elements"),
-                ) {
-                    (
-                        Some(Some("rich_text_section")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_section_elements(elements, slack_references),
-                    (
-                        Some(Some("rich_text_list")),
-                        Some(serde_json::Value::String(style)),
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_list_elements(elements, style, slack_references),
-                    (
-                        Some(Some("rich_text_preformatted")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_preformatted_elements(elements, slack_references),
-                    (
-                        Some(Some("rich_text_quote")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_quote_elements(elements, slack_references),
-                    _ => "".to_string(),
-                }
-            })
-            .collect::<Vec<String>>()
-            .join(""),
+        Some(serde_json::Value::Array(elements)) => join(
+            elements
+                .iter()
+                .map(|element| {
+                    match (
+                        element.get("type").map(|t| t.as_str()),
+                        element.get("style"),
+                        element.get("elements"),
+                    ) {
+                        (
+                            Some(Some("rich_text_section")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_section_elements(elements, slack_references),
+                        (
+                            Some(Some("rich_text_list")),
+                            Some(serde_json::Value::String(style)),
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_list_elements(elements, style, slack_references),
+                        (
+                            Some(Some("rich_text_preformatted")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_preformatted_elements(elements, slack_references),
+                        (
+                            Some(Some("rich_text_quote")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_quote_elements(elements, slack_references),
+                        _ => "".to_string(),
+                    }
+                })
+                .collect::<Vec<String>>(),
+        ),
         _ => "".to_string(),
     }
 }
@@ -148,11 +173,12 @@ fn render_rich_text_section_elements(
     elements: &[serde_json::Value],
     slack_references: &SlackReferences,
 ) -> String {
-    elements
-        .iter()
-        .map(|e| render_rich_text_section_element(e, slack_references))
-        .collect::<Vec<String>>()
-        .join("")
+    join(
+        elements
+            .iter()
+            .map(|e| render_rich_text_section_element(e, slack_references))
+            .collect::<Vec<String>>(),
+    )
 }
 
 fn render_rich_text_list_elements(
@@ -700,6 +726,45 @@ mod tests {
                 }
 
                 #[test]
+                fn test_with_consecutive_bold_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Hello",
+                                        "style": {
+                                            "bold": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": " ",
+                                        "style": {
+                                            "bold": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "World!",
+                                        "style": {
+                                            "bold": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        "*Hello World!*".to_string()
+                    );
+                }
+
+                #[test]
                 fn test_with_italic_text() {
                     let blocks = vec![SlackBlock::RichText(serde_json::json!({
                         "type": "rich_text",
@@ -721,6 +786,45 @@ mod tests {
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default()),
                         "_Text_".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_consecutive_italic_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Hello",
+                                        "style": {
+                                            "italic": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": " ",
+                                        "style": {
+                                            "italic": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "World!",
+                                        "style": {
+                                            "italic": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        "_Hello World!_".to_string()
                     );
                 }
 
@@ -750,6 +854,45 @@ mod tests {
                 }
 
                 #[test]
+                fn test_with_consecutive_strike_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Hello",
+                                        "style": {
+                                            "strike": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": " ",
+                                        "style": {
+                                            "strike": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "World!",
+                                        "style": {
+                                            "strike": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        "~Hello World!~".to_string()
+                    );
+                }
+
+                #[test]
                 fn test_with_code_text() {
                     let blocks = vec![SlackBlock::RichText(serde_json::json!({
                         "type": "rich_text",
@@ -771,6 +914,38 @@ mod tests {
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default()),
                         "`Text`".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_consecutive_code_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text1",
+                                        "style": {
+                                            "code": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "Text2",
+                                        "style": {
+                                            "code": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        "`Text1Text2`".to_string()
                     );
                 }
 
@@ -798,6 +973,51 @@ mod tests {
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default()),
                         "~_*Text*_~".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_consecutive_styled_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Hello",
+                                        "style": {
+                                            "bold": true,
+                                            "italic": true,
+                                            "strike": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": " ",
+                                        "style": {
+                                            "bold": true,
+                                            "italic": true,
+                                            "strike": true
+                                        }
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "World!",
+                                        "style": {
+                                            "bold": true,
+                                            "italic": true,
+                                            "strike": true
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        "~_*Hello World!*_~".to_string()
                     );
                 }
             }
