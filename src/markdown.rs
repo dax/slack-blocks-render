@@ -20,7 +20,7 @@ pub fn render_blocks_as_markdown(
     for block in blocks {
         block_renderer.visit_slack_block(&block);
     }
-    join(block_renderer.sub_texts)
+    block_renderer.sub_texts.join("\n")
 }
 
 struct MardownRenderer {
@@ -131,40 +131,39 @@ fn render_rich_text_block_as_markdown(
     slack_references: &SlackReferences,
 ) -> String {
     match json_value.get("elements") {
-        Some(serde_json::Value::Array(elements)) => join(
-            elements
-                .iter()
-                .map(|element| {
-                    match (
-                        element.get("type").map(|t| t.as_str()),
-                        element.get("style"),
-                        element.get("elements"),
-                    ) {
-                        (
-                            Some(Some("rich_text_section")),
-                            None,
-                            Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_section_elements(elements, slack_references),
-                        (
-                            Some(Some("rich_text_list")),
-                            Some(serde_json::Value::String(style)),
-                            Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_list_elements(elements, style, slack_references),
-                        (
-                            Some(Some("rich_text_preformatted")),
-                            None,
-                            Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_preformatted_elements(elements, slack_references),
-                        (
-                            Some(Some("rich_text_quote")),
-                            None,
-                            Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_quote_elements(elements, slack_references),
-                        _ => "".to_string(),
-                    }
-                })
-                .collect::<Vec<String>>(),
-        ),
+        Some(serde_json::Value::Array(elements)) => elements
+            .iter()
+            .map(|element| {
+                match (
+                    element.get("type").map(|t| t.as_str()),
+                    element.get("style"),
+                    element.get("elements"),
+                ) {
+                    (
+                        Some(Some("rich_text_section")),
+                        None,
+                        Some(serde_json::Value::Array(elements)),
+                    ) => render_rich_text_section_elements(elements, slack_references),
+                    (
+                        Some(Some("rich_text_list")),
+                        Some(serde_json::Value::String(style)),
+                        Some(serde_json::Value::Array(elements)),
+                    ) => render_rich_text_list_elements(elements, style, slack_references),
+                    (
+                        Some(Some("rich_text_preformatted")),
+                        None,
+                        Some(serde_json::Value::Array(elements)),
+                    ) => render_rich_text_preformatted_elements(elements, slack_references),
+                    (
+                        Some(Some("rich_text_quote")),
+                        None,
+                        Some(serde_json::Value::Array(elements)),
+                    ) => render_rich_text_quote_elements(elements, slack_references),
+                    _ => "".to_string(),
+                }
+            })
+            .collect::<Vec<String>>()
+            .join("\n"),
         _ => "".to_string(),
     }
 }
@@ -403,7 +402,7 @@ mod tests {
         ];
         assert_eq!(
             render_blocks_as_markdown(blocks, SlackReferences::default()),
-            "![Image](https://example.com/image.png)![Image2](https://example.com/image2.png)"
+            "![Image](https://example.com/image.png)\n![Image2](https://example.com/image2.png)"
                 .to_string()
         );
     }
@@ -416,7 +415,7 @@ mod tests {
         ];
         assert_eq!(
             render_blocks_as_markdown(blocks, SlackReferences::default()),
-            "---\n---\n".to_string()
+            "---\n\n---\n".to_string()
         );
     }
 
@@ -489,7 +488,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default()),
-                "TextText2".to_string()
+                "Text\nText2".to_string()
             );
         }
 
@@ -505,7 +504,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default()),
-                "TextText2".to_string()
+                "Text\nText2".to_string()
             );
         }
 
@@ -523,7 +522,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default()),
-                "Text11Text12Text21Text22".to_string()
+                "Text11Text12\nText21Text22".to_string()
             );
         }
 
@@ -553,7 +552,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default()),
-                "Text1Text11Text12Text2Text21Text22".to_string()
+                "Text1Text11Text12\nText2Text21Text22".to_string()
             );
         }
     }
@@ -618,7 +617,7 @@ mod tests {
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default()),
-                "".to_string()
+                "\n".to_string()
             );
         }
 
@@ -696,7 +695,8 @@ mod tests {
                     ];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default()),
-                        "Text111Text112Text121Text122Text211Text212Text221Text222".to_string()
+                        "Text111Text112\nText121Text122\nText211Text212\nText221Text222"
+                            .to_string()
                     );
                 }
 
@@ -1447,6 +1447,38 @@ mod tests {
                 assert_eq!(
                     render_blocks_as_markdown(blocks, SlackReferences::default()),
                     "> Text1Text2".to_string()
+                );
+            }
+
+            #[test]
+            fn test_with_quoted_text_followed_by_non_quoted_text() {
+                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_quote",
+                            "elements": [
+                                {
+                                    "text": "Text1",
+                                    "type": "text"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "text": "Text2",
+                                    "type": "text"
+                                },
+                            ]
+                        }
+                    ]
+                }))];
+
+                assert_eq!(
+                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    "> Text1\nText2".to_string()
                 );
             }
         }
