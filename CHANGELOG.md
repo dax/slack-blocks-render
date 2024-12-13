@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.5](https://github.com/dax/slack-blocks-render/compare/v0.2.4...v0.2.5) - 2024-12-13
+
+### Fixed
+
+- Add new lines between blocks and rich text elements
+
 ## [0.2.4](https://github.com/dax/slack-blocks-render/compare/v0.2.3...v0.2.4) - 2024-12-09
 
 ### Fixed
