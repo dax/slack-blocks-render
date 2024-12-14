@@ -33,7 +33,7 @@
 //!         ]
 //!     })),
 //! ];
-//! let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default());
+//! let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default(), None);
 //! ```
 //!
 //! ## Usage with Slack references resolution
@@ -82,7 +82,7 @@
 //! //     slack_references.users.insert(slack_user_id, user_info.name);
 //! // }
 //! // Finally, render the blocks as Markdown
-//! let markdown_text = render_blocks_as_markdown(blocks, slack_references);
+//! let markdown_text = render_blocks_as_markdown(blocks, slack_references, None);
 //! ```
 pub mod markdown;
 pub mod references;

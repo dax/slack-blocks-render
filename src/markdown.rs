@@ -15,24 +15,27 @@ use crate::{
 pub fn render_blocks_as_markdown(
     blocks: Vec<SlackBlock>,
     slack_references: SlackReferences,
+    handle_delimiter: Option<String>,
 ) -> String {
-    let mut block_renderer = MardownRenderer::new(slack_references);
+    let mut block_renderer = MarkdownRenderer::new(slack_references, handle_delimiter);
     for block in blocks {
         block_renderer.visit_slack_block(&block);
     }
     block_renderer.sub_texts.join("\n")
 }
 
-struct MardownRenderer {
+struct MarkdownRenderer {
     pub sub_texts: Vec<String>,
     pub slack_references: SlackReferences,
+    pub handle_delimiter: Option<String>,
 }
 
-impl MardownRenderer {
-    pub fn new(slack_references: SlackReferences) -> Self {
-        MardownRenderer {
+impl MarkdownRenderer {
+    pub fn new(slack_references: SlackReferences, handle_delimiter: Option<String>) -> Self {
+        MarkdownRenderer {
             sub_texts: vec![],
             slack_references,
+            handle_delimiter,
         }
     }
 }
@@ -61,9 +64,10 @@ fn join(mut texts: Vec<String>) -> String {
     texts.join("")
 }
 
-impl Visitor for MardownRenderer {
+impl Visitor for MarkdownRenderer {
     fn visit_slack_section_block(&mut self, slack_section_block: &SlackSectionBlock) {
-        let mut section_renderer = MardownRenderer::new(self.slack_references.clone());
+        let mut section_renderer =
+            MarkdownRenderer::new(self.slack_references.clone(), self.handle_delimiter.clone());
         visit_slack_section_block(&mut section_renderer, slack_section_block);
         self.sub_texts.push(join(section_renderer.sub_texts));
     }
@@ -74,7 +78,8 @@ impl Visitor for MardownRenderer {
     }
 
     fn visit_slack_header_block(&mut self, slack_header_block: &SlackHeaderBlock) {
-        let mut header_renderer = MardownRenderer::new(self.slack_references.clone());
+        let mut header_renderer =
+            MarkdownRenderer::new(self.slack_references.clone(), self.handle_delimiter.clone());
         visit_slack_header_block(&mut header_renderer, slack_header_block);
         self.sub_texts
             .push(format!("## {}", join(header_renderer.sub_texts)));
@@ -113,7 +118,8 @@ impl Visitor for MardownRenderer {
     }
 
     fn visit_slack_context_block(&mut self, slack_context_block: &SlackContextBlock) {
-        let mut section_renderer = MardownRenderer::new(self.slack_references.clone());
+        let mut section_renderer =
+            MarkdownRenderer::new(self.slack_references.clone(), self.handle_delimiter.clone());
         visit_slack_context_block(&mut section_renderer, slack_context_block);
         self.sub_texts.push(section_renderer.sub_texts.join(""));
     }
@@ -121,14 +127,14 @@ impl Visitor for MardownRenderer {
     fn visit_slack_rich_text_block(&mut self, slack_rich_text_block: &SlackRichTextBlock) {
         self.sub_texts.push(render_rich_text_block_as_markdown(
             slack_rich_text_block.json_value.clone(),
-            &self.slack_references,
+            self,
         ));
     }
 }
 
 fn render_rich_text_block_as_markdown(
     json_value: serde_json::Value,
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
     match json_value.get("elements") {
         Some(serde_json::Value::Array(elements)) => elements
@@ -143,22 +149,22 @@ fn render_rich_text_block_as_markdown(
                         Some(Some("rich_text_section")),
                         None,
                         Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_section_elements(elements, slack_references),
+                    ) => render_rich_text_section_elements(elements, renderer),
                     (
                         Some(Some("rich_text_list")),
                         Some(serde_json::Value::String(style)),
                         Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_list_elements(elements, style, slack_references),
+                    ) => render_rich_text_list_elements(elements, style, renderer),
                     (
                         Some(Some("rich_text_preformatted")),
                         None,
                         Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_preformatted_elements(elements, slack_references),
+                    ) => render_rich_text_preformatted_elements(elements, renderer),
                     (
                         Some(Some("rich_text_quote")),
                         None,
                         Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_quote_elements(elements, slack_references),
+                    ) => render_rich_text_quote_elements(elements, renderer),
                     _ => "".to_string(),
                 }
             })
@@ -170,12 +176,12 @@ fn render_rich_text_block_as_markdown(
 
 fn render_rich_text_section_elements(
     elements: &[serde_json::Value],
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
     join(
         elements
             .iter()
-            .map(|e| render_rich_text_section_element(e, slack_references))
+            .map(|e| render_rich_text_section_element(e, renderer))
             .collect::<Vec<String>>(),
     )
 }
@@ -183,17 +189,14 @@ fn render_rich_text_section_elements(
 fn render_rich_text_list_elements(
     elements: &[serde_json::Value],
     style: &str,
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
     let list_style = if style == "ordered" { "1." } else { "-" };
     elements
         .iter()
         .filter_map(|element| {
             if let Some(serde_json::Value::Array(elements)) = element.get("elements") {
-                Some(render_rich_text_section_elements(
-                    elements,
-                    slack_references,
-                ))
+                Some(render_rich_text_section_elements(elements, renderer))
             } else {
                 None
             }
@@ -205,28 +208,29 @@ fn render_rich_text_list_elements(
 
 fn render_rich_text_preformatted_elements(
     elements: &[serde_json::Value],
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
     format!(
         "```{}```",
-        render_rich_text_section_elements(elements, slack_references)
+        render_rich_text_section_elements(elements, renderer)
     )
 }
 
 fn render_rich_text_quote_elements(
     elements: &[serde_json::Value],
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
     format!(
         "> {}",
-        render_rich_text_section_elements(elements, slack_references)
+        render_rich_text_section_elements(elements, renderer)
     )
 }
 
 fn render_rich_text_section_element(
     element: &serde_json::Value,
-    slack_references: &SlackReferences,
+    renderer: &MarkdownRenderer,
 ) -> String {
+    let handle_delimiter = renderer.handle_delimiter.clone().unwrap_or_default();
     match element.get("type").map(|t| t.as_str()) {
         Some(Some("text")) => {
             let Some(serde_json::Value::String(text)) = element.get("text") else {
@@ -242,7 +246,8 @@ fn render_rich_text_section_element(
             let Some(serde_json::Value::String(channel_id)) = element.get("channel_id") else {
                 return "".to_string();
             };
-            let channel_rendered = if let Some(Some(channel_name)) = slack_references
+            let channel_rendered = if let Some(Some(channel_name)) = renderer
+                .slack_references
                 .channels
                 .get(&SlackChannelId(channel_id.clone()))
             {
@@ -260,15 +265,20 @@ fn render_rich_text_section_element(
             let Some(serde_json::Value::String(user_id)) = element.get("user_id") else {
                 return "".to_string();
             };
-            let user_rendered = if let Some(Some(user_name)) =
-                slack_references.users.get(&SlackUserId(user_id.clone()))
+            let user_rendered = if let Some(Some(user_name)) = renderer
+                .slack_references
+                .users
+                .get(&SlackUserId(user_id.clone()))
             {
                 user_name
             } else {
                 user_id
             };
             let style = element.get("style");
-            let user_rendered = apply_bold_style(format!("@{user_rendered}"), style);
+            let user_rendered = apply_bold_style(
+                format!("{handle_delimiter}@{user_rendered}{handle_delimiter}"),
+                style,
+            );
             let user_rendered = apply_italic_style(user_rendered, style);
             let user_rendered = apply_strike_style(user_rendered, style);
             apply_code_style(user_rendered, style)
@@ -277,7 +287,8 @@ fn render_rich_text_section_element(
             let Some(serde_json::Value::String(usergroup_id)) = element.get("usergroup_id") else {
                 return "".to_string();
             };
-            let usergroup_rendered = if let Some(Some(usergroup_name)) = slack_references
+            let usergroup_rendered = if let Some(Some(usergroup_name)) = renderer
+                .slack_references
                 .usergroups
                 .get(&SlackUserGroupId(usergroup_id.clone()))
             {
@@ -286,7 +297,10 @@ fn render_rich_text_section_element(
                 usergroup_id
             };
             let style = element.get("style");
-            let usergroup_rendered = apply_bold_style(format!("@{usergroup_rendered}"), style);
+            let usergroup_rendered = apply_bold_style(
+                format!("{handle_delimiter}@{usergroup_rendered}{handle_delimiter}"),
+                style,
+            );
             let usergroup_rendered = apply_italic_style(usergroup_rendered, style);
             let usergroup_rendered = apply_strike_style(usergroup_rendered, style);
             apply_code_style(usergroup_rendered, style)
@@ -383,7 +397,7 @@ mod tests {
     #[test]
     fn test_empty_input() {
         assert_eq!(
-            render_blocks_as_markdown(vec![], SlackReferences::default()),
+            render_blocks_as_markdown(vec![], SlackReferences::default(), None),
             "".to_string()
         );
     }
@@ -401,7 +415,7 @@ mod tests {
             )),
         ];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "![Image](https://example.com/image.png)\n![Image2](https://example.com/image2.png)"
                 .to_string()
         );
@@ -414,7 +428,7 @@ mod tests {
             SlackBlock::Divider(SlackDividerBlock::new()),
         ];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "---\n\n---\n".to_string()
         );
     }
@@ -429,7 +443,7 @@ mod tests {
             )),
         ))];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
         );
     }
@@ -439,7 +453,7 @@ mod tests {
         // No rendering
         let blocks = vec![SlackBlock::Actions(SlackActionsBlock::new(vec![]))];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
         );
     }
@@ -449,7 +463,7 @@ mod tests {
         // No rendering
         let blocks = vec![SlackBlock::File(SlackFileBlock::new("external_id".into()))];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
         );
     }
@@ -459,7 +473,7 @@ mod tests {
         // No rendering
         let blocks = vec![SlackBlock::Event(serde_json::json!({}))];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
         );
     }
@@ -468,7 +482,7 @@ mod tests {
     fn test_header() {
         let blocks = vec![SlackBlock::Header(SlackHeaderBlock::new("Text".into()))];
         assert_eq!(
-            render_blocks_as_markdown(blocks, SlackReferences::default()),
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "## Text".to_string()
         );
     }
@@ -487,7 +501,7 @@ mod tests {
                 ))),
             ];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "Text\nText2".to_string()
             );
         }
@@ -503,7 +517,7 @@ mod tests {
                 ))),
             ];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "Text\nText2".to_string()
             );
         }
@@ -521,7 +535,7 @@ mod tests {
                 ])),
             ];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "Text11Text12\nText21Text22".to_string()
             );
         }
@@ -551,7 +565,7 @@ mod tests {
                 ),
             ];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "Text1Text11Text12\nText2Text21Text22".to_string()
             );
         }
@@ -573,7 +587,7 @@ mod tests {
                 )),
             ]))];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "![Image](https://example.com/image.png)![Image2](https://example.com/image2.png)"
                     .to_string()
             );
@@ -586,7 +600,7 @@ mod tests {
                 SlackContextBlockElement::Plain(SlackBlockPlainText::new("Text2".to_string())),
             ]))];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "TextText2".to_string()
             );
         }
@@ -600,7 +614,7 @@ mod tests {
                 )),
             ]))];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "TextText2".to_string()
             );
         }
@@ -616,7 +630,7 @@ mod tests {
                 SlackBlock::RichText(serde_json::json!({})),
             ];
             assert_eq!(
-                render_blocks_as_markdown(blocks, SlackReferences::default()),
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                 "\n".to_string()
             );
         }
@@ -694,7 +708,7 @@ mod tests {
                         })),
                     ];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "Text111Text112\nText121Text122\nText211Text212\nText221Text222"
                             .to_string()
                     );
@@ -720,7 +734,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "*Text*".to_string()
                     );
                 }
@@ -759,7 +773,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "*Hello World!*".to_string()
                     );
                 }
@@ -784,7 +798,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "_Text_".to_string()
                     );
                 }
@@ -823,7 +837,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "_Hello World!_".to_string()
                     );
                 }
@@ -848,7 +862,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "~Text~".to_string()
                     );
                 }
@@ -887,7 +901,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "~Hello World!~".to_string()
                     );
                 }
@@ -912,7 +926,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "`Text`".to_string()
                     );
                 }
@@ -944,7 +958,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "`Text1Text2`".to_string()
                     );
                 }
@@ -971,7 +985,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "~_*Text*_~".to_string()
                     );
                 }
@@ -1016,7 +1030,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "~_*Hello World!*_~".to_string()
                     );
                 }
@@ -1042,7 +1056,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "#C0123456".to_string()
                     );
                 }
@@ -1072,7 +1086,8 @@ mod tests {
                                     Some("general".to_string())
                                 )]),
                                 ..SlackReferences::default()
-                            }
+                            },
+                            None
                         ),
                         "#general".to_string()
                     );
@@ -1099,8 +1114,34 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "@user1".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_user_id_and_custom_delimiter() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "user",
+                                        "user_id": "user1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences::default(),
+                            Some("@".to_string())
+                        ),
+                        "@@user1@".to_string()
                     );
                 }
 
@@ -1129,9 +1170,42 @@ mod tests {
                                     Some("John Doe".to_string())
                                 )]),
                                 ..SlackReferences::default()
-                            }
+                            },
+                            None
                         ),
                         "@John Doe".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_user_id_and_reference_and_custom_delimiter() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "user",
+                                        "user_id": "user1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences {
+                                users: HashMap::from([(
+                                    SlackUserId("user1".to_string()),
+                                    Some("John Doe".to_string())
+                                )]),
+                                ..SlackReferences::default()
+                            },
+                            Some("@".to_string())
+                        ),
+                        "@@John Doe@".to_string()
                     );
                 }
             }
@@ -1156,8 +1230,34 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "@group1".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_usergroup_id_and_custom_delimiter() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "usergroup",
+                                        "usergroup_id": "group1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences::default(),
+                            Some("@".to_string())
+                        ),
+                        "@@group1@".to_string()
                     );
                 }
 
@@ -1186,9 +1286,42 @@ mod tests {
                                     Some("Admins".to_string())
                                 )]),
                                 ..SlackReferences::default()
-                            }
+                            },
+                            None
                         ),
                         "@Admins".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_usergroup_id_and_reference_and_custom_delimiter() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "usergroup",
+                                        "usergroup_id": "group1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences {
+                                usergroups: HashMap::from([(
+                                    SlackUserGroupId("group1".to_string()),
+                                    Some("Admins".to_string())
+                                )]),
+                                ..SlackReferences::default()
+                            },
+                            Some("@".to_string())
+                        ),
+                        "@@Admins@".to_string()
                     );
                 }
             }
@@ -1214,7 +1347,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "[example](https://example.com)".to_string()
                     );
                 }
@@ -1240,7 +1373,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "👋".to_string()
                     );
                 }
@@ -1262,7 +1395,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "👋🏻".to_string()
                     );
                 }
@@ -1284,7 +1417,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "👋".to_string()
                     );
                 }
@@ -1306,7 +1439,7 @@ mod tests {
                         ]
                     }))];
                     assert_eq!(
-                        render_blocks_as_markdown(blocks, SlackReferences::default()),
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         ":bbb:".to_string()
                     );
                 }
@@ -1348,7 +1481,7 @@ mod tests {
                     ]
                 }))];
                 assert_eq!(
-                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                     "1. Text1\n1. Text2".to_string()
                 );
             }
@@ -1385,7 +1518,7 @@ mod tests {
                     ]
                 }))];
                 assert_eq!(
-                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                     "- Text1\n- Text2".to_string()
                 );
             }
@@ -1415,7 +1548,7 @@ mod tests {
                     ]
                 }))];
                 assert_eq!(
-                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                     "```Text1Text2```".to_string()
                 );
             }
@@ -1445,7 +1578,7 @@ mod tests {
                     ]
                 }))];
                 assert_eq!(
-                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                     "> Text1Text2".to_string()
                 );
             }
@@ -1477,7 +1610,7 @@ mod tests {
                 }))];
 
                 assert_eq!(
-                    render_blocks_as_markdown(blocks, SlackReferences::default()),
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                     "> Text1\nText2".to_string()
                 );
             }
