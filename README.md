@@ -42,7 +42,7 @@ let blocks: Vec<SlackBlock> = vec![
         ]
     })),
 ];
-let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default());
+let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default(), None);
 ```
 
 ### Usage with Slack references resolution
@@ -92,7 +92,7 @@ let slack_references = find_slack_references_in_blocks(&blocks);
 //     slack_references.users.insert(slack_user_id, user_info.name);
 // }
 // Finally, render the blocks as Markdown
-let markdown_text = render_blocks_as_markdown(blocks, slack_references);
+let markdown_text = render_blocks_as_markdown(blocks, slack_references, None);
 ```
 
 ## License
