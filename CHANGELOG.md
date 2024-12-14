@@ -6,6 +6,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0](https://github.com/dax/slack-blocks-render/compare/v0.2.5...v0.3.0) - 2024-12-14
+
+### Added
+
+- Add an option to add a custom delimiter for handles
+
 ## [0.2.5](https://github.com/dax/slack-blocks-render/compare/v0.2.4...v0.2.5) - 2024-12-13
 
 ### Fixed
