@@ -246,10 +246,7 @@ fn render_rich_text_section_element(
                 return "".to_string();
             };
             let style = element.get("style");
-            let text = apply_bold_style(text.to_string(), style);
-            let text = apply_italic_style(text, style);
-            let text = apply_strike_style(text, style);
-            apply_code_style(text, style)
+            apply_all_styles(text.to_string(), style)
         }
         Some(Some("channel")) => {
             let Some(serde_json::Value::String(channel_id)) = element.get("channel_id") else {
@@ -265,10 +262,7 @@ fn render_rich_text_section_element(
                 channel_id
             };
             let style = element.get("style");
-            let channel_rendered = apply_bold_style(format!("#{channel_rendered}"), style);
-            let channel_rendered = apply_italic_style(channel_rendered, style);
-            let channel_rendered = apply_strike_style(channel_rendered, style);
-            apply_code_style(channel_rendered, style)
+            apply_all_styles(format!("#{channel_rendered}"), style)
         }
         Some(Some("user")) => {
             let Some(serde_json::Value::String(user_id)) = element.get("user_id") else {
@@ -284,13 +278,10 @@ fn render_rich_text_section_element(
                 user_id
             };
             let style = element.get("style");
-            let user_rendered = apply_bold_style(
+            apply_all_styles(
                 format!("{handle_delimiter}@{user_rendered}{handle_delimiter}"),
                 style,
-            );
-            let user_rendered = apply_italic_style(user_rendered, style);
-            let user_rendered = apply_strike_style(user_rendered, style);
-            apply_code_style(user_rendered, style)
+            )
         }
         Some(Some("usergroup")) => {
             let Some(serde_json::Value::String(usergroup_id)) = element.get("usergroup_id") else {
@@ -306,24 +297,22 @@ fn render_rich_text_section_element(
                 usergroup_id
             };
             let style = element.get("style");
-            let usergroup_rendered = apply_bold_style(
+            apply_all_styles(
                 format!("{handle_delimiter}@{usergroup_rendered}{handle_delimiter}"),
                 style,
-            );
-            let usergroup_rendered = apply_italic_style(usergroup_rendered, style);
-            let usergroup_rendered = apply_strike_style(usergroup_rendered, style);
-            apply_code_style(usergroup_rendered, style)
+            )
         }
         Some(Some("emoji")) => {
             let Some(serde_json::Value::String(name)) = element.get("name") else {
                 return "".to_string();
             };
+            let style = element.get("style");
             let name = if let Some(Some(emoji)) = renderer.slack_references.emojis.get(name) {
                 if emoji.starts_with("alias:") {
                     emoji.trim_start_matches("alias:")
                 } else {
                     if emoji.parse::<Url>().is_ok() {
-                        return format!("![:{}:]({})", name, emoji);
+                        return apply_all_styles(format!("![:{}:]({})", name, emoji), style);
                     } else {
                         emoji
                     }
@@ -334,21 +323,21 @@ fn render_rich_text_section_element(
 
             let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
             let Some(first) = splitted.first() else {
-                return format!(":{}:", name);
+                return apply_all_styles(format!(":{}:", name), style);
             };
             let Some(emoji) = emojis::get_by_shortcode(first) else {
-                return format!(":{}:", name);
+                return apply_all_styles(format!(":{}:", name), style);
             };
             let Some(skin_tone) = splitted.get(1).and_then(|s| s.parse::<usize>().ok()) else {
-                return emoji.to_string();
+                return apply_all_styles(emoji.to_string(), style);
             };
             let Some(mut skin_tones) = emoji.skin_tones() else {
-                return emoji.to_string();
+                return apply_all_styles(emoji.to_string(), style);
             };
             let Some(skinned_emoji) = skin_tones.nth(skin_tone - 1) else {
-                return emoji.to_string();
+                return apply_all_styles(emoji.to_string(), style);
             };
-            skinned_emoji.to_string()
+            apply_all_styles(skinned_emoji.to_string(), style)
         }
         Some(Some("link")) => {
             let (Some(serde_json::Value::String(url)), Some(serde_json::Value::String(text))) =
@@ -357,10 +346,7 @@ fn render_rich_text_section_element(
                 return "".to_string();
             };
             let style = element.get("style");
-            let url = apply_bold_style(render_url_as_markdown(url, text), style);
-            let url = apply_italic_style(url, style);
-            let url = apply_strike_style(url, style);
-            apply_code_style(url, style)
+            apply_all_styles(render_url_as_markdown(url, text), style)
         }
         _ => "".to_string(),
     }
@@ -368,6 +354,13 @@ fn render_rich_text_section_element(
 
 fn render_url_as_markdown(url: &str, text: &str) -> String {
     format!("[{}]({})", text, url)
+}
+
+fn apply_all_styles(text: String, style: Option<&serde_json::Value>) -> String {
+    let text = apply_bold_style(text, style);
+    let text = apply_italic_style(text, style);
+    let text = apply_strike_style(text, style);
+    apply_code_style(text, style)
 }
 
 fn apply_bold_style(text: String, style: Option<&serde_json::Value>) -> String {
@@ -1022,6 +1015,15 @@ mod tests {
                                 "type": "rich_text_section",
                                 "elements": [
                                     {
+                                        "name": "chart_with_upwards_trend",
+                                        "type": "emoji",
+                                        "style": {
+                                            "bold": true,
+                                            "italic": true,
+                                            "strike": true
+                                        },
+                                    },
+                                    {
                                         "type": "text",
                                         "text": "Hello",
                                         "style": {
@@ -1054,7 +1056,7 @@ mod tests {
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "~_*Hello World!*_~".to_string()
+                        "~_*📈Hello World!*_~".to_string()
                     );
                 }
             }
