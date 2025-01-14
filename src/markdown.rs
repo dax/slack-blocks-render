@@ -220,7 +220,7 @@ fn render_rich_text_preformatted_elements(
     renderer: &MarkdownRenderer,
 ) -> String {
     format!(
-        "```{}```",
+        "```\n{}\n```",
         render_rich_text_section_elements(elements, renderer)
     )
 }
@@ -1636,7 +1636,60 @@ mod tests {
                 }))];
                 assert_eq!(
                     render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                    "```Text1Text2```".to_string()
+                    "```\nText1Text2\n```".to_string()
+                );
+            }
+
+            #[test]
+            fn test_with_text_and_newline() {
+                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_preformatted",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "test:\n  sub: value"
+                                }
+                            ]
+                        }
+                    ]
+                }))];
+                assert_eq!(
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                    "```\ntest:\n  sub: value\n```".to_string()
+                );
+            }
+
+            #[test]
+            fn test_with_preformatted_text_followed_by_text() {
+                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_preformatted",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "Text1"
+                                }
+                            ]
+                        },
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "Text2"
+                                }
+                            ]
+                        },
+                    ]
+                }))];
+                assert_eq!(
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                    "```\nText1\n```\nText2".to_string()
                 );
             }
         }
