@@ -7,9 +7,14 @@ use crate::visitor::{visit_slack_rich_text_block, SlackRichTextBlock, Visitor};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct SlackReferences {
+    #[serde(default = "HashMap::new")]
     pub channels: HashMap<SlackChannelId, Option<String>>,
+    #[serde(default = "HashMap::new")]
     pub users: HashMap<SlackUserId, Option<String>>,
+    #[serde(default = "HashMap::new")]
     pub usergroups: HashMap<SlackUserGroupId, Option<String>>,
+    #[serde(default = "HashMap::new")]
+    pub emojis: HashMap<String, Option<String>>,
 }
 
 impl SlackReferences {
@@ -18,6 +23,7 @@ impl SlackReferences {
             channels: HashMap::new(),
             users: HashMap::new(),
             usergroups: HashMap::new(),
+            emojis: HashMap::new(),
         }
     }
 
@@ -25,10 +31,14 @@ impl SlackReferences {
         self.users.extend(other.users);
         self.usergroups.extend(other.usergroups);
         self.channels.extend(other.channels);
+        self.emojis.extend(other.emojis);
     }
 
     pub fn is_empty(&self) -> bool {
-        self.users.is_empty() && self.usergroups.is_empty() && self.channels.is_empty()
+        self.users.is_empty()
+            && self.usergroups.is_empty()
+            && self.channels.is_empty()
+            && self.emojis.is_empty()
     }
 }
 
@@ -166,6 +176,20 @@ fn find_slack_references_in_rich_text_section_element(
                 .usergroups
                 .insert(SlackUserGroupId(usergroup_id.to_string()), None);
         }
+        Some(Some("emoji")) => {
+            let Some(serde_json::Value::String(name)) = element.get("name") else {
+                return;
+            };
+            let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
+            let Some(first) = splitted.first() else {
+                slack_references.emojis.insert(name.to_string(), None);
+                return;
+            };
+            if emojis::get_by_shortcode(first).is_none() {
+                slack_references.emojis.insert(name.to_string(), None);
+                return;
+            };
+        }
         _ => {}
     }
 }
@@ -268,6 +292,10 @@ mod test {
                         {
                             "type": "usergroup",
                             "usergroup_id": "group1"
+                        },
+                        {
+                            "type": "emoji",
+                            "name": "aaa"
                         }
                     ]
                 },
@@ -285,6 +313,10 @@ mod test {
                         {
                             "type": "usergroup",
                             "usergroup_id": "group2"
+                        },
+                        {
+                            "type": "emoji",
+                            "name": "bbb"
                         }
                     ]
                 },
@@ -305,6 +337,76 @@ mod test {
                     (SlackUserGroupId("group1".to_string()), None),
                     (SlackUserGroupId("group2".to_string()), None)
                 ]),
+                emojis: HashMap::from([("aaa".to_string(), None), ("bbb".to_string(), None)]),
+            }
+        );
+    }
+
+    #[test]
+    fn test_find_slack_references_with_known_emoji() {
+        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+            "type": "rich_text",
+            "elements": [
+                {
+                    "type": "rich_text_section",
+                    "elements": [
+                        {
+                            "type": "emoji",
+                            "name": "wave"
+                        }
+                    ]
+                }
+            ]
+        }))];
+        assert_eq!(
+            find_slack_references_in_blocks(&blocks),
+            SlackReferences::default()
+        );
+    }
+
+    #[test]
+    fn test_find_slack_references_with_known_skinned_emoji() {
+        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+            "type": "rich_text",
+            "elements": [
+                {
+                    "type": "rich_text_section",
+                    "elements": [
+                        {
+                            "type": "emoji",
+                            "name": "wave::skin-tone-2"
+                        }
+                    ]
+                }
+            ]
+        }))];
+        assert_eq!(
+            find_slack_references_in_blocks(&blocks),
+            SlackReferences::default()
+        );
+    }
+
+    #[test]
+    fn test_find_slack_references_with_unknown_emoji() {
+        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+            "type": "rich_text",
+            "elements": [
+                {
+                    "type": "rich_text_section",
+                    "elements": [
+                        {
+                            "type": "emoji",
+                            "name": "bbb"
+                        }
+                    ]
+                }
+            ]
+        }))];
+        assert_eq!(
+            find_slack_references_in_blocks(&blocks),
+            SlackReferences {
+                emojis: HashMap::from([("bbb".to_string(), None)]),
+                ..SlackReferences::default()
             }
         );
     }

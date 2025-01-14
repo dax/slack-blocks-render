@@ -1,4 +1,5 @@
 use slack_morphism::prelude::*;
+use url::Url;
 
 use crate::{
     references::SlackReferences,
@@ -309,6 +310,20 @@ fn render_rich_text_section_element(
             let Some(serde_json::Value::String(name)) = element.get("name") else {
                 return "".to_string();
             };
+            let name = if let Some(Some(emoji)) = renderer.slack_references.emojis.get(name) {
+                if emoji.starts_with("alias:") {
+                    emoji.trim_start_matches("alias:")
+                } else {
+                    if emoji.parse::<Url>().is_ok() {
+                        return format!("![:{}:]({})", name, emoji);
+                    } else {
+                        emoji
+                    }
+                }
+            } else {
+                name
+            };
+
             let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
             let Some(first) = splitted.first() else {
                 return format!(":{}:", name);
@@ -1432,7 +1447,7 @@ mod tests {
                                 "elements": [
                                     {
                                         "type": "emoji",
-                                        "name": "bbb"
+                                        "name": "unknown1"
                                     }
                                 ]
                             }
@@ -1440,7 +1455,71 @@ mod tests {
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        ":bbb:".to_string()
+                        ":unknown1:".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_unknown_emoji_with_slack_reference_alias() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "emoji",
+                                        "name": "unknown1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences {
+                                emojis: HashMap::from([(
+                                    "unknown1".to_string(),
+                                    Some("alias:wave".to_string())
+                                )]),
+                                ..SlackReferences::default()
+                            },
+                            None
+                        ),
+                        "👋".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_unknown_emoji_with_slack_reference_image_url() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "emoji",
+                                        "name": "unknown1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences {
+                                emojis: HashMap::from([(
+                                    "unknown1".to_string(),
+                                    Some("https://emoji.com/unknown1.png".to_string())
+                                )]),
+                                ..SlackReferences::default()
+                            },
+                            None
+                        ),
+                        "![:unknown1:](https://emoji.com/unknown1.png)".to_string()
                     );
                 }
             }
