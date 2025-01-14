@@ -41,7 +41,7 @@ impl MarkdownRenderer {
     }
 }
 
-fn join(mut texts: Vec<String>) -> String {
+fn join(mut texts: Vec<String>, join_str: &str) -> String {
     for i in 0..texts.len() {
         if i < texts.len() - 1 {
             if texts[i].ends_with('`') && texts[i + 1].starts_with('`') {
@@ -60,9 +60,12 @@ fn join(mut texts: Vec<String>) -> String {
                 texts[i].pop();
                 texts[i + 1].remove(0);
             }
+            if texts[i].starts_with("> ") && !texts[i + 1].starts_with("> ") {
+                texts[i].push_str("\n");
+            }
         }
     }
-    texts.join("")
+    texts.join(join_str)
 }
 
 impl Visitor for MarkdownRenderer {
@@ -70,7 +73,7 @@ impl Visitor for MarkdownRenderer {
         let mut section_renderer =
             MarkdownRenderer::new(self.slack_references.clone(), self.handle_delimiter.clone());
         visit_slack_section_block(&mut section_renderer, slack_section_block);
-        self.sub_texts.push(join(section_renderer.sub_texts));
+        self.sub_texts.push(join(section_renderer.sub_texts, ""));
     }
 
     fn visit_slack_block_plain_text(&mut self, slack_block_plain_text: &SlackBlockPlainText) {
@@ -83,7 +86,7 @@ impl Visitor for MarkdownRenderer {
             MarkdownRenderer::new(self.slack_references.clone(), self.handle_delimiter.clone());
         visit_slack_header_block(&mut header_renderer, slack_header_block);
         self.sub_texts
-            .push(format!("## {}", join(header_renderer.sub_texts)));
+            .push(format!("## {}", join(header_renderer.sub_texts, "")));
     }
 
     fn visit_slack_divider_block(&mut self, slack_divider_block: &SlackDividerBlock) {
@@ -138,39 +141,43 @@ fn render_rich_text_block_as_markdown(
     renderer: &MarkdownRenderer,
 ) -> String {
     match json_value.get("elements") {
-        Some(serde_json::Value::Array(elements)) => elements
-            .iter()
-            .map(|element| {
-                match (
-                    element.get("type").map(|t| t.as_str()),
-                    element.get("style"),
-                    element.get("elements"),
-                ) {
-                    (
-                        Some(Some("rich_text_section")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_section_elements(elements, renderer),
-                    (
-                        Some(Some("rich_text_list")),
-                        Some(serde_json::Value::String(style)),
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_list_elements(elements, style, renderer),
-                    (
-                        Some(Some("rich_text_preformatted")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_preformatted_elements(elements, renderer),
-                    (
-                        Some(Some("rich_text_quote")),
-                        None,
-                        Some(serde_json::Value::Array(elements)),
-                    ) => render_rich_text_quote_elements(elements, renderer),
-                    _ => "".to_string(),
-                }
-            })
-            .collect::<Vec<String>>()
-            .join("\n"),
+        Some(serde_json::Value::Array(elements)) => join(
+            elements
+                .iter()
+                .map(|element| {
+                    match (
+                        element.get("type").map(|t| t.as_str()),
+                        element.get("style"),
+                        element.get("elements"),
+                    ) {
+                        (
+                            Some(Some("rich_text_section")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_section_elements(elements, renderer),
+                        (
+                            Some(Some("rich_text_list")),
+                            Some(serde_json::Value::String(style)),
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_list_elements(elements, style, renderer),
+                        (
+                            Some(Some("rich_text_preformatted")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_preformatted_elements(elements, renderer),
+
+                        (
+                            Some(Some("rich_text_quote")),
+                            None,
+                            Some(serde_json::Value::Array(elements)),
+                        ) => render_rich_text_quote_elements(elements, renderer),
+
+                        _ => "".to_string(),
+                    }
+                })
+                .collect::<Vec<String>>(),
+            "\n",
+        ),
         _ => "".to_string(),
     }
 }
@@ -184,6 +191,7 @@ fn render_rich_text_section_elements(
             .iter()
             .map(|e| render_rich_text_section_element(e, renderer))
             .collect::<Vec<String>>(),
+        "",
     )
 }
 
@@ -1663,6 +1671,37 @@ mod tests {
             }
 
             #[test]
+            fn test_with_quoted_text_followed_by_quoted_text() {
+                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_quote",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "Text1"
+                                },
+                            ]
+                        },
+                        {
+                            "type": "rich_text_quote",
+                            "elements": [
+                                {
+                                    "type": "text",
+                                    "text": "Text2"
+                                }
+                            ]
+                        },
+                    ]
+                }))];
+                assert_eq!(
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                    "> Text1\n> Text2".to_string()
+                );
+            }
+
+            #[test]
             fn test_with_quoted_text_followed_by_non_quoted_text() {
                 let blocks = vec![SlackBlock::RichText(serde_json::json!({
                     "type": "rich_text",
@@ -1690,7 +1729,7 @@ mod tests {
 
                 assert_eq!(
                     render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                    "> Text1\nText2".to_string()
+                    "> Text1\n\nText2".to_string()
                 );
             }
         }
