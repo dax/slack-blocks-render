@@ -314,37 +314,7 @@ fn render_rich_text_section_element(
                 return "".to_string();
             };
             let style = element.get("style");
-            let name = if let Some(Some(emoji)) = renderer.slack_references.emojis.get(name) {
-                if emoji.starts_with("alias:") {
-                    emoji.trim_start_matches("alias:")
-                } else {
-                    if emoji.parse::<Url>().is_ok() {
-                        return apply_all_styles(format!("![:{}:]({})", name, emoji), style);
-                    } else {
-                        emoji
-                    }
-                }
-            } else {
-                name
-            };
-
-            let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
-            let Some(first) = splitted.first() else {
-                return apply_all_styles(format!(":{}:", name), style);
-            };
-            let Some(emoji) = emojis::get_by_shortcode(first) else {
-                return apply_all_styles(format!(":{}:", name), style);
-            };
-            let Some(skin_tone) = splitted.get(1).and_then(|s| s.parse::<usize>().ok()) else {
-                return apply_all_styles(emoji.to_string(), style);
-            };
-            let Some(mut skin_tones) = emoji.skin_tones() else {
-                return apply_all_styles(emoji.to_string(), style);
-            };
-            let Some(skinned_emoji) = skin_tones.nth(skin_tone - 1) else {
-                return apply_all_styles(emoji.to_string(), style);
-            };
-            apply_all_styles(skinned_emoji.to_string(), style)
+            render_emoji(name, &renderer.slack_references, style)
         }
         Some(Some("link")) => {
             let (Some(serde_json::Value::String(url)), Some(serde_json::Value::String(text))) =
@@ -361,6 +331,38 @@ fn render_rich_text_section_element(
 
 fn render_url_as_markdown(url: &str, text: &str) -> String {
     format!("[{}]({})", text, url)
+}
+
+fn render_emoji(name: &str, slack_references: &SlackReferences, style: Option<&Value>) -> String {
+    let name = if let Some(Some(emoji)) = slack_references.emojis.get(name) {
+        if emoji.starts_with("alias:") {
+            return render_emoji(emoji.trim_start_matches("alias:"), slack_references, style);
+        } else if emoji.parse::<Url>().is_ok() {
+            return apply_all_styles(format!("![:{}:]({})", name, emoji), style);
+        } else {
+            emoji
+        }
+    } else {
+        name
+    };
+
+    let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
+    let Some(first) = splitted.first() else {
+        return apply_all_styles(format!(":{}:", name), style);
+    };
+    let Some(emoji) = emojis::get_by_shortcode(first) else {
+        return apply_all_styles(format!(":{}:", name), style);
+    };
+    let Some(skin_tone) = splitted.get(1).and_then(|s| s.parse::<usize>().ok()) else {
+        return apply_all_styles(emoji.to_string(), style);
+    };
+    let Some(mut skin_tones) = emoji.skin_tones() else {
+        return apply_all_styles(emoji.to_string(), style);
+    };
+    let Some(skinned_emoji) = skin_tones.nth(skin_tone - 1) else {
+        return apply_all_styles(emoji.to_string(), style);
+    };
+    apply_all_styles(skinned_emoji.to_string(), style)
 }
 
 fn apply_all_styles(text: String, style: Option<&serde_json::Value>) -> String {
@@ -1581,6 +1583,41 @@ mod tests {
                             None
                         ),
                         "👋".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_unknown_emoji_with_slack_reference_alias_to_custom_emoji() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "emoji",
+                                        "name": "unknown1"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(
+                            blocks,
+                            SlackReferences {
+                                emojis: HashMap::from([
+                                    ("unknown1".to_string(), Some("alias:unknown2".to_string())),
+                                    (
+                                        "unknown2".to_string(),
+                                        Some("https://emoji.com/unknown2.png".to_string())
+                                    )
+                                ]),
+                                ..SlackReferences::default()
+                            },
+                            None
+                        ),
+                        "![:unknown2:](https://emoji.com/unknown2.png)".to_string()
                     );
                 }
 
