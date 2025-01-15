@@ -187,7 +187,6 @@ fn find_slack_references_in_rich_text_section_element(
             };
             if emojis::get_by_shortcode(first).is_none() {
                 slack_references.emojis.insert(name.to_string(), None);
-                return;
             };
         }
         _ => {}

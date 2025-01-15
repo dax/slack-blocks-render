@@ -1,3 +1,4 @@
+use serde_json::Value;
 use slack_morphism::prelude::*;
 use url::Url;
 
@@ -61,7 +62,7 @@ fn join(mut texts: Vec<String>, join_str: &str) -> String {
                 texts[i + 1].remove(0);
             }
             if texts[i].starts_with("> ") && !texts[i + 1].starts_with("> ") {
-                texts[i].push_str("\n");
+                texts[i].push('\n');
             }
         }
     }
@@ -154,7 +155,7 @@ fn render_rich_text_block_as_markdown(
                             Some(Some("rich_text_section")),
                             None,
                             Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_section_elements(elements, renderer),
+                        ) => render_rich_text_section_elements(elements, renderer, true),
                         (
                             Some(Some("rich_text_list")),
                             Some(serde_json::Value::String(style)),
@@ -185,14 +186,20 @@ fn render_rich_text_block_as_markdown(
 fn render_rich_text_section_elements(
     elements: &[serde_json::Value],
     renderer: &MarkdownRenderer,
+    fix_newlines_in_text: bool,
 ) -> String {
-    join(
+    let result = join(
         elements
             .iter()
             .map(|e| render_rich_text_section_element(e, renderer))
             .collect::<Vec<String>>(),
         "",
-    )
+    );
+    if fix_newlines_in_text {
+        fix_newlines(result)
+    } else {
+        result
+    }
 }
 
 fn render_rich_text_list_elements(
@@ -205,7 +212,7 @@ fn render_rich_text_list_elements(
         .iter()
         .filter_map(|element| {
             if let Some(serde_json::Value::Array(elements)) = element.get("elements") {
-                Some(render_rich_text_section_elements(elements, renderer))
+                Some(render_rich_text_section_elements(elements, renderer, true))
             } else {
                 None
             }
@@ -221,7 +228,7 @@ fn render_rich_text_preformatted_elements(
 ) -> String {
     format!(
         "```\n{}\n```",
-        render_rich_text_section_elements(elements, renderer)
+        render_rich_text_section_elements(elements, renderer, false)
     )
 }
 
@@ -231,7 +238,7 @@ fn render_rich_text_quote_elements(
 ) -> String {
     format!(
         "> {}",
-        render_rich_text_section_elements(elements, renderer)
+        render_rich_text_section_elements(elements, renderer, true)
     )
 }
 
@@ -400,6 +407,12 @@ fn is_styled(style: Option<&serde_json::Value>, style_name: &str) -> bool {
         .and_then(|s| s.get(style_name).map(|b| b.as_bool()))
         .flatten()
         .unwrap_or_default()
+}
+
+fn fix_newlines(text: String) -> String {
+    text.replace("\n", "\\\n")
+        .trim_end_matches("\\\n")
+        .to_string()
 }
 
 #[cfg(test)]
@@ -727,6 +740,76 @@ mod tests {
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "Text111Text112\nText121Text122\nText211Text212\nText221Text222"
                             .to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_text_with_newline() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text111\nText112\n"
+                                    },
+                                    {
+                                        "type": "text",
+                                        "text": "Text211\nText212\n"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "Text111\\\nText112\\\nText211\\\nText212".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_text_with_newline_char() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text111\\nText112"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "Text111\\nText112".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_text_with_only_newline() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "\n"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "".to_string()
                     );
                 }
 
