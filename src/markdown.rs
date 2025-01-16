@@ -340,10 +340,11 @@ fn render_rich_text_section_element(
             render_emoji(name, &renderer.slack_references, style)
         }
         Some(Some("link")) => {
-            let (Some(serde_json::Value::String(url)), Some(serde_json::Value::String(text))) =
-                (element.get("url"), element.get("text"))
-            else {
+            let Some(serde_json::Value::String(url)) = element.get("url") else {
                 return "".to_string();
+            };
+            let Some(serde_json::Value::String(text)) = element.get("text") else {
+                return render_url_as_markdown(url, url);
             };
             let style = element.get("style");
             apply_all_styles(render_url_as_markdown(url, text), style)
@@ -1482,6 +1483,28 @@ mod tests {
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
                         "[example](https://example.com)".to_string()
+                    );
+                }
+
+                #[test]
+                fn test_with_url_without_text() {
+                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "link",
+                                        "url": "https://example.com"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "[https://example.com](https://example.com)".to_string()
                     );
                 }
             }
