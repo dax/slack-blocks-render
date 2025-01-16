@@ -150,27 +150,47 @@ fn render_rich_text_block_as_markdown(
                         element.get("type").map(|t| t.as_str()),
                         element.get("style"),
                         element.get("elements"),
+                        element.get("indent"),
                     ) {
                         (
                             Some(Some("rich_text_section")),
-                            None,
+                            _,
                             Some(serde_json::Value::Array(elements)),
+                            _,
                         ) => render_rich_text_section_elements(elements, renderer, true),
                         (
                             Some(Some("rich_text_list")),
                             Some(serde_json::Value::String(style)),
                             Some(serde_json::Value::Array(elements)),
-                        ) => render_rich_text_list_elements(elements, style, renderer),
+                            Some(serde_json::Value::Number(indent)),
+                        ) => render_rich_text_list_elements(
+                            elements,
+                            style,
+                            indent
+                                .as_u64()
+                                .unwrap_or_default()
+                                .try_into()
+                                .unwrap_or_default(),
+                            renderer,
+                        ),
+                        (
+                            Some(Some("rich_text_list")),
+                            Some(serde_json::Value::String(style)),
+                            Some(serde_json::Value::Array(elements)),
+                            _,
+                        ) => render_rich_text_list_elements(elements, style, 0, renderer),
                         (
                             Some(Some("rich_text_preformatted")),
-                            None,
+                            _,
                             Some(serde_json::Value::Array(elements)),
+                            _,
                         ) => render_rich_text_preformatted_elements(elements, renderer),
 
                         (
                             Some(Some("rich_text_quote")),
-                            None,
+                            _,
                             Some(serde_json::Value::Array(elements)),
+                            _,
                         ) => render_rich_text_quote_elements(elements, renderer),
 
                         _ => "".to_string(),
@@ -205,9 +225,12 @@ fn render_rich_text_section_elements(
 fn render_rich_text_list_elements(
     elements: &[serde_json::Value],
     style: &str,
+    indent: usize,
     renderer: &MarkdownRenderer,
 ) -> String {
     let list_style = if style == "ordered" { "1." } else { "-" };
+    let space_per_level = if style == "ordered" { 3 } else { 2 };
+    let indent_prefix = " ".repeat(space_per_level * indent);
     elements
         .iter()
         .filter_map(|element| {
@@ -217,7 +240,7 @@ fn render_rich_text_list_elements(
                 None
             }
         })
-        .map(|element| format!("{list_style} {element}"))
+        .map(|element| format!("{indent_prefix}{list_style} {element}"))
         .collect::<Vec<String>>()
         .join("\n")
 }
@@ -1696,6 +1719,81 @@ mod tests {
             }
 
             #[test]
+            fn test_with_nested_ordered_list() {
+                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_list",
+                            "style": "ordered",
+                            "elements": [
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text1"
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            "type": "rich_text_list",
+                            "style": "ordered",
+                            "elements": [
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text2"
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            "type": "rich_text_list",
+                            "style": "ordered",
+                            "indent": 1,
+                            "elements": [
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text2.1"
+                                        }
+                                    ]
+                                },
+                            ]
+                        },
+                        {
+                            "type": "rich_text_list",
+                            "style": "ordered",
+                            "indent": 2,
+                            "elements": [
+                                {
+                                    "type": "rich_text_section",
+                                    "elements": [
+                                        {
+                                            "type": "text",
+                                            "text": "Text2.1.1"
+                                        }
+                                    ]
+                                },
+                            ]
+                        }
+                    ]
+                }))];
+                assert_eq!(
+                    render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                    "1. Text1\n1. Text2\n   1. Text2.1\n      1. Text2.1.1".to_string()
+                );
+            }
+
+            #[test]
             fn test_with_bullet_list() {
                 let blocks = vec![SlackBlock::RichText(serde_json::json!({
                     "type": "rich_text",
@@ -1731,6 +1829,81 @@ mod tests {
                     "- Text1\n- Text2".to_string()
                 );
             }
+        }
+
+        #[test]
+        fn test_with_nested_bullet_list() {
+            let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                "type": "rich_text",
+                "elements": [
+                    {
+                        "type": "rich_text_list",
+                        "style": "bullet",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text1"
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        "type": "rich_text_list",
+                        "style": "bullet",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text2"
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        "type": "rich_text_list",
+                        "style": "bullet",
+                        "indent": 1,
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text2.1"
+                                    }
+                                ]
+                            },
+                        ]
+                    },
+                    {
+                        "type": "rich_text_list",
+                        "style": "bullet",
+                        "indent": 2,
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "text",
+                                        "text": "Text2.1.1"
+                                    }
+                                ]
+                            },
+                        ]
+                    }
+                ]
+            }))];
+            assert_eq!(
+                render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                "- Text1\n- Text2\n  - Text2.1\n    - Text2.1.1".to_string()
+            );
         }
 
         mod rich_text_preformatted {
