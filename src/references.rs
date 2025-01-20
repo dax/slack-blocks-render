@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
-use slack_morphism::{blocks::SlackBlock, SlackChannelId, SlackUserGroupId, SlackUserId};
+use slack_morphism::prelude::*;
 
 use crate::visitor::{visit_slack_rich_text_block, SlackRichTextBlock, Visitor};
 
@@ -14,7 +14,7 @@ pub struct SlackReferences {
     #[serde(default = "HashMap::new")]
     pub usergroups: HashMap<SlackUserGroupId, Option<String>>,
     #[serde(default = "HashMap::new")]
-    pub emojis: HashMap<String, Option<String>>,
+    pub emojis: HashMap<SlackEmojiName, Option<SlackEmojiRef>>,
 }
 
 impl SlackReferences {
@@ -182,11 +182,15 @@ fn find_slack_references_in_rich_text_section_element(
             };
             let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
             let Some(first) = splitted.first() else {
-                slack_references.emojis.insert(name.to_string(), None);
+                slack_references
+                    .emojis
+                    .insert(SlackEmojiName(name.to_string()), None);
                 return;
             };
             if emojis::get_by_shortcode(first).is_none() {
-                slack_references.emojis.insert(name.to_string(), None);
+                slack_references
+                    .emojis
+                    .insert(SlackEmojiName(name.to_string()), None);
             };
         }
         _ => {}
@@ -336,7 +340,10 @@ mod test {
                     (SlackUserGroupId("group1".to_string()), None),
                     (SlackUserGroupId("group2".to_string()), None)
                 ]),
-                emojis: HashMap::from([("aaa".to_string(), None), ("bbb".to_string(), None)]),
+                emojis: HashMap::from([
+                    (SlackEmojiName("aaa".to_string()), None),
+                    (SlackEmojiName("bbb".to_string()), None)
+                ]),
             }
         );
     }
@@ -404,7 +411,7 @@ mod test {
         assert_eq!(
             find_slack_references_in_blocks(&blocks),
             SlackReferences {
-                emojis: HashMap::from([("bbb".to_string(), None)]),
+                emojis: HashMap::from([(SlackEmojiName("bbb".to_string()), None)]),
                 ..SlackReferences::default()
             }
         );

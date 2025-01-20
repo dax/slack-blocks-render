@@ -1,6 +1,5 @@
 use serde_json::Value;
 use slack_morphism::prelude::*;
-use url::Url;
 
 use crate::{
     references::SlackReferences,
@@ -337,7 +336,11 @@ fn render_rich_text_section_element(
                 return "".to_string();
             };
             let style = element.get("style");
-            render_emoji(name, &renderer.slack_references, style)
+            render_emoji(
+                &SlackEmojiName(name.to_string()),
+                &renderer.slack_references,
+                style,
+            )
         }
         Some(Some("link")) => {
             let Some(serde_json::Value::String(url)) = element.get("url") else {
@@ -357,18 +360,22 @@ fn render_url_as_markdown(url: &str, text: &str) -> String {
     format!("[{}]({})", text, url)
 }
 
-fn render_emoji(name: &str, slack_references: &SlackReferences, style: Option<&Value>) -> String {
-    let name = if let Some(Some(emoji)) = slack_references.emojis.get(name) {
-        if emoji.starts_with("alias:") {
-            return render_emoji(emoji.trim_start_matches("alias:"), slack_references, style);
-        } else if emoji.parse::<Url>().is_ok() {
-            return apply_all_styles(format!("![:{}:]({})", name, emoji), style);
-        } else {
-            emoji
+fn render_emoji(
+    emoji_name: &SlackEmojiName,
+    slack_references: &SlackReferences,
+    style: Option<&Value>,
+) -> String {
+    if let Some(Some(emoji)) = slack_references.emojis.get(emoji_name) {
+        match emoji {
+            SlackEmojiRef::Alias(alias) => {
+                return render_emoji(alias, slack_references, style);
+            }
+            SlackEmojiRef::Url(url) => {
+                return apply_all_styles(format!("![:{}:]({})", emoji_name.0, url), style);
+            }
         }
-    } else {
-        name
-    };
+    }
+    let name = &emoji_name.0;
 
     let splitted = name.split("::skin-tone-").collect::<Vec<&str>>();
     let Some(first) = splitted.first() else {
@@ -1621,8 +1628,8 @@ mod tests {
                             blocks,
                             SlackReferences {
                                 emojis: HashMap::from([(
-                                    "unknown1".to_string(),
-                                    Some("alias:wave".to_string())
+                                    SlackEmojiName("unknown1".to_string()),
+                                    Some(SlackEmojiRef::Alias(SlackEmojiName("wave".to_string())))
                                 )]),
                                 ..SlackReferences::default()
                             },
@@ -1653,10 +1660,17 @@ mod tests {
                             blocks,
                             SlackReferences {
                                 emojis: HashMap::from([
-                                    ("unknown1".to_string(), Some("alias:unknown2".to_string())),
                                     (
-                                        "unknown2".to_string(),
-                                        Some("https://emoji.com/unknown2.png".to_string())
+                                        SlackEmojiName("unknown1".to_string()),
+                                        Some(SlackEmojiRef::Alias(SlackEmojiName(
+                                            "unknown2".to_string()
+                                        )))
+                                    ),
+                                    (
+                                        SlackEmojiName("unknown2".to_string()),
+                                        Some(SlackEmojiRef::Url(
+                                            "https://emoji.com/unknown2.png".parse().unwrap()
+                                        ))
                                     )
                                 ]),
                                 ..SlackReferences::default()
@@ -1688,8 +1702,10 @@ mod tests {
                             blocks,
                             SlackReferences {
                                 emojis: HashMap::from([(
-                                    "unknown1".to_string(),
-                                    Some("https://emoji.com/unknown1.png".to_string())
+                                    SlackEmojiName("unknown1".to_string()),
+                                    Some(SlackEmojiRef::Url(
+                                        "https://emoji.com/unknown1.png".parse().unwrap()
+                                    ))
                                 )]),
                                 ..SlackReferences::default()
                             },
