@@ -1042,8 +1042,7 @@ dependencies = [
 [[package]]
 name = "slack-morphism"
 version = "2.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "66f508258c5a135a0bd3ce346abefd2a418d6a5ad9eb7cee47a3bdb6b62b9f35"
+source = "git+https://github.com/dax/slack-morphism-rust?branch=add-video-slack-block#b9ab0580e6cef5e744a24637d526493d017cac56"
 dependencies = [
  "async-recursion",
  "async-trait",

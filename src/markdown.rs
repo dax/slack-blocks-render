@@ -7,7 +7,7 @@ use crate::{
         visit_slack_block_image_element, visit_slack_block_mark_down_text,
         visit_slack_block_plain_text, visit_slack_context_block, visit_slack_divider_block,
         visit_slack_header_block, visit_slack_image_block, visit_slack_section_block,
-        SlackRichTextBlock, Visitor,
+        visit_slack_video_block, SlackRichTextBlock, Visitor,
     },
 };
 
@@ -133,6 +133,36 @@ impl Visitor for MarkdownRenderer {
             slack_rich_text_block.json_value.clone(),
             self,
         ));
+    }
+
+    fn visit_slack_video_block(&mut self, slack_video_block: &SlackVideoBlock) {
+        let title: SlackBlockText = slack_video_block.title.clone().into();
+        let title = match title {
+            SlackBlockText::Plain(plain_text) => plain_text.text,
+            SlackBlockText::MarkDown(md_text) => md_text.text,
+        };
+        if let Some(ref title_url) = slack_video_block.title_url {
+            self.sub_texts
+                .push(format!("*[{}]({})*\n", title, title_url));
+        } else {
+            self.sub_texts.push(format!("*{}*\n", title));
+        }
+
+        if let Some(description) = slack_video_block.description.clone() {
+            let description: SlackBlockText = description.into();
+            let description = match description {
+                SlackBlockText::Plain(plain_text) => plain_text.text,
+                SlackBlockText::MarkDown(md_text) => md_text.text,
+            };
+            self.sub_texts.push(format!("{}\n", description));
+        }
+
+        self.sub_texts.push(format!(
+            "![{}]({})",
+            slack_video_block.alt_text, slack_video_block.thumbnail_url
+        ));
+
+        visit_slack_video_block(self, slack_video_block);
     }
 }
 
@@ -527,6 +557,46 @@ mod tests {
         assert_eq!(
             render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
+        );
+    }
+
+    #[test]
+    fn test_with_video() {
+        let blocks = vec![SlackBlock::Video(
+            SlackVideoBlock::new(
+                "alt text".into(),
+                "Video title".into(),
+                "https://example.com/thumbnail.jpg".parse().unwrap(),
+                "https://example.com/video_embed.avi".parse().unwrap(),
+            )
+            .with_description("Video description".into())
+            .with_title_url("https://example.com/video".parse().unwrap()),
+        )];
+        assert_eq!(
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+            r#"*[Video title](https://example.com/video)*
+
+Video description
+
+![alt text](https://example.com/thumbnail.jpg)"#
+                .to_string()
+        );
+    }
+
+    #[test]
+    fn test_with_video_minimal() {
+        let blocks = vec![SlackBlock::Video(SlackVideoBlock::new(
+            "alt text".into(),
+            "Video title".into(),
+            "https://example.com/thumbnail.jpg".parse().unwrap(),
+            "https://example.com/video_embed.avi".parse().unwrap(),
+        ))];
+        assert_eq!(
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+            r#"*Video title*
+
+![alt text](https://example.com/thumbnail.jpg)"#
+                .to_string()
         );
     }
 
