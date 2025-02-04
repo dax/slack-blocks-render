@@ -22,8 +22,10 @@ visitor!(
                 SlackBlock::Context(context) => visitor.visit_slack_context_block(context),
                 SlackBlock::Input(input) => visitor.visit_slack_input_block(input),
                 SlackBlock::File(file) => visitor.visit_slack_file_block(file),
+                SlackBlock::Video(video) => visitor.visit_slack_video_block(video),
                 SlackBlock::RichText(json_value) => visitor.visit_slack_rich_text_block(&SlackRichTextBlock { json_value: json_value.clone() }),
                 SlackBlock::Event(json_value) => visitor.visit_slack_event_block(&SlackEventBlock { json_value: json_value.clone() }),
+                SlackBlock::Markdown(markdown) => visitor.visit_slack_markdown_block(markdown)
             }
         },
     ]
@@ -77,6 +79,8 @@ visitor!(
     SlackBlockMarkDownText,
     SlackInputBlock,
     SlackFileBlock,
+    SlackVideoBlock,
     SlackEventBlock,
     SlackRichTextBlock,
+    SlackMarkdownBlock,
 );
