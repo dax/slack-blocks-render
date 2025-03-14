@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0](https://github.com/dax/slack-blocks-render/compare/v0.3.0...v0.4.0) - 2025-03-14
+
+### Added
+
+- Render custom Slack emojis
+
+### Fixed
+
+- Add support for `video` Slack block
+- Use typed emojis references
+- Render links without text as URL
+- Indent nested list items
+- Resolve custom emoji as alias
+- Use CommonMark newline syntax ending lines with `\`
+- Apply styles on emoji blocks
+- Wrap preformatted text with new lines
+- Add newline at the end of quoted text
+
+### Other
+
+- Update dependencies
+
 ## [0.3.0](https://github.com/dax/slack-blocks-render/compare/v0.2.5...v0.3.0) - 2024-12-14
 
 ### Added
