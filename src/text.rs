@@ -297,11 +297,15 @@ mod tests {
     fn test_with_image() {
         let blocks = vec![
             SlackBlock::Image(SlackImageBlock::new(
-                Url::parse("https://example.com/image.png").unwrap(),
+                SlackImageUrlOrFile::ImageUrl {
+                    image_url: Url::parse("https://example.com/image.png").unwrap(),
+                },
                 "Image".to_string(),
             )),
             SlackBlock::Image(SlackImageBlock::new(
-                Url::parse("https://example.com/image2.png").unwrap(),
+                SlackImageUrlOrFile::ImageUrl {
+                    image_url: Url::parse("https://example.com/image2.png").unwrap(),
+                },
                 "Image2".to_string(),
             )),
         ];
@@ -502,11 +506,15 @@ Video description"#
         fn test_with_image() {
             let blocks = vec![SlackBlock::Context(SlackContextBlock::new(vec![
                 SlackContextBlockElement::Image(SlackBlockImageElement::new(
-                    "https://example.com/image.png".to_string(),
+                    SlackImageUrlOrFile::ImageUrl {
+                        image_url: Url::parse("https://example.com/image.png").unwrap(),
+                    },
                     "Image".to_string(),
                 )),
                 SlackContextBlockElement::Image(SlackBlockImageElement::new(
-                    "https://example.com/image2.png".to_string(),
+                    SlackImageUrlOrFile::ImageUrl {
+                        image_url: Url::parse("https://example.com/image2.png").unwrap(),
+                    },
                     "Image2".to_string(),
                 )),
             ]))];

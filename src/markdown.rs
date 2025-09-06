@@ -95,10 +95,10 @@ impl Visitor for MarkdownRenderer {
     }
 
     fn visit_slack_image_block(&mut self, slack_image_block: &SlackImageBlock) {
-        self.sub_texts.push(format!(
-            "![{}]({})",
-            slack_image_block.alt_text, slack_image_block.image_url
-        ));
+        if let Some(image_url) = slack_image_block.image_url_or_file.image_url() {
+            self.sub_texts
+                .push(format!("![{}]({})", slack_image_block.alt_text, image_url));
+        }
         visit_slack_image_block(self, slack_image_block);
     }
 
@@ -106,10 +106,12 @@ impl Visitor for MarkdownRenderer {
         &mut self,
         slack_block_image_element: &SlackBlockImageElement,
     ) {
-        self.sub_texts.push(format!(
-            "![{}]({})",
-            slack_block_image_element.alt_text, slack_block_image_element.image_url
-        ));
+        if let Some(image_url) = slack_block_image_element.image_url_or_file.image_url() {
+            self.sub_texts.push(format!(
+                "![{}]({})",
+                slack_block_image_element.alt_text, image_url
+            ));
+        }
         visit_slack_block_image_element(self, slack_block_image_element);
     }
 
@@ -503,11 +505,15 @@ mod tests {
     fn test_with_image() {
         let blocks = vec![
             SlackBlock::Image(SlackImageBlock::new(
-                Url::parse("https://example.com/image.png").unwrap(),
+                SlackImageUrlOrFile::ImageUrl {
+                    image_url: Url::parse("https://example.com/image.png").unwrap(),
+                },
                 "Image".to_string(),
             )),
             SlackBlock::Image(SlackImageBlock::new(
-                Url::parse("https://example.com/image2.png").unwrap(),
+                SlackImageUrlOrFile::ImageUrl {
+                    image_url: Url::parse("https://example.com/image2.png").unwrap(),
+                },
                 "Image2".to_string(),
             )),
         ];
@@ -715,11 +721,15 @@ Video description
         fn test_with_image() {
             let blocks = vec![SlackBlock::Context(SlackContextBlock::new(vec![
                 SlackContextBlockElement::Image(SlackBlockImageElement::new(
-                    "https://example.com/image.png".to_string(),
+                    SlackImageUrlOrFile::ImageUrl {
+                        image_url: Url::parse("https://example.com/image.png").unwrap(),
+                    },
                     "Image".to_string(),
                 )),
                 SlackContextBlockElement::Image(SlackBlockImageElement::new(
-                    "https://example.com/image2.png".to_string(),
+                    SlackImageUrlOrFile::ImageUrl {
+                        image_url: Url::parse("https://example.com/image2.png").unwrap(),
+                    },
                     "Image2".to_string(),
                 )),
             ]))];
