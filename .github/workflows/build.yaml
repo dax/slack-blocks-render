@@ -10,26 +10,44 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  cache-checkmate:
+  fmt:
     runs-on: ubuntu-latest
     steps:
-      - uses: taiki-e/cache-cargo-install-action@v2
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          tool: cargo-checkmate
+          components: rustfmt
+      - uses: j178/prek-action@v2
+        with:
+          extra-args: cargo-fmt
 
-  run-phase:
+  checks:
+    needs: fmt
     strategy:
+      fail-fast: false
       matrix:
-        # Update this with `cargo checkmate list`
-        phase: [check, format, clippy, build, test, doc, audit]
-    needs: cache-checkmate
+        hook: [cargo-check, cargo-clippy, cargo-build, cargo-test, cargo-doc]
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: j178/prek-action@v2
+        with:
+          extra-args: ${{ matrix.hook }}
+
+  audit:
+    needs: fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/cache-cargo-install-action@v2
         with:
-          tool: cargo-checkmate
-      - uses: actions/checkout@v3
-      - run: cargo-checkmate run ${{ matrix.phase }}
+          tool: cargo-audit
+      - run: cargo audit
 
   readme:
     runs-on: ubuntu-latest
