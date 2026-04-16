@@ -15,6 +15,10 @@ pub struct SlackReferences {
     pub usergroups: HashMap<SlackUserGroupId, Option<String>>,
     #[serde(default = "HashMap::new")]
     pub emojis: HashMap<SlackEmojiName, Option<SlackEmojiRef>>,
+    #[serde(default)]
+    pub user_id_to_highlight: Option<SlackUserId>,
+    #[serde(default)]
+    pub usergroup_ids_to_highlight: Option<Vec<SlackUserGroupId>>,
 }
 
 impl SlackReferences {
@@ -24,6 +28,8 @@ impl SlackReferences {
             users: HashMap::new(),
             usergroups: HashMap::new(),
             emojis: HashMap::new(),
+            user_id_to_highlight: None,
+            usergroup_ids_to_highlight: None,
         }
     }
 
@@ -32,6 +38,11 @@ impl SlackReferences {
         self.usergroups.extend(other.usergroups);
         self.channels.extend(other.channels);
         self.emojis.extend(other.emojis);
+        if let Some(other_ids) = other.usergroup_ids_to_highlight {
+            self.usergroup_ids_to_highlight
+                .get_or_insert_with(Vec::new)
+                .extend(other_ids);
+        }
     }
 
     pub fn is_empty(&self) -> bool {
@@ -344,6 +355,7 @@ mod test {
                     (SlackEmojiName("aaa".to_string()), None),
                     (SlackEmojiName("bbb".to_string()), None)
                 ]),
+                ..SlackReferences::default()
             }
         );
     }

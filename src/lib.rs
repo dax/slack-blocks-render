@@ -84,10 +84,12 @@
 //! // Finally, render the blocks as Markdown
 //! let markdown_text = render_blocks_as_markdown(blocks, slack_references, None);
 //! ```
+pub mod html;
 pub mod markdown;
 pub mod references;
 pub mod text;
 pub mod visitor;
 
+pub use html::render_blocks_as_html;
 pub use markdown::render_blocks_as_markdown;
 pub use references::{find_slack_references_in_blocks, SlackReferences};
