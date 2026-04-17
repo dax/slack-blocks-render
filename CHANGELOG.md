@@ -26,6 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Expose render_slack_mrkdwn_text_as_html as public API
 
+### Other
+
+- release v0.5.0
+
+## [0.5.1](https://github.com/dax/slack-blocks-render/compare/v0.5.0...v0.5.1) - 2026-04-17
+
+### Added
+
+- Expose render_slack_mrkdwn_text_as_html as public API
+
 ## [0.5.0](https://github.com/dax/slack-blocks-render/compare/v0.4.2...v0.5.0) - 2026-04-17
 
 ### Added
