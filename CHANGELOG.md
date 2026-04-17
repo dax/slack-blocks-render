@@ -20,6 +20,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0](https://github.com/dax/slack-blocks-render/compare/v0.4.2...v0.5.0) - 2026-04-17
+
+### Added
+
+- Add HTML renderer for Slack blocks
+
+### Other
+
+- Update slack-morphism to 2.20 and adapt to typed RichText
+- Replace cargo-checkmate with prek
+
 ## [0.4.1](https://github.com/dax/slack-blocks-render/compare/v0.4.0...v0.4.1) - 2025-03-19
 
 ### Other
