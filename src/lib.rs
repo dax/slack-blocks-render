@@ -91,6 +91,6 @@ pub mod visitor;
 #[cfg(test)]
 pub(crate) mod test_utils;
 
-pub use html::render_blocks_as_html;
+pub use html::{render_blocks_as_html, render_slack_mrkdwn_text_as_html};
 pub use markdown::render_blocks_as_markdown;
 pub use references::{find_slack_references_in_blocks, SlackReferences};

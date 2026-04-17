@@ -12,6 +12,23 @@ use crate::{
     },
 };
 
+/// Render Slack's mrkdwn-formatted text directly as HTML.
+/// Use this for raw Slack text (e.g., attachment text, plain text fallback)
+/// that uses Slack's mrkdwn syntax but is not structured as blocks.
+pub fn render_slack_mrkdwn_text_as_html(
+    text: &str,
+    slack_references: &SlackReferences,
+    default_style_class: &str,
+    highlight_style_class: &str,
+) -> String {
+    let renderer = HtmlRenderer::new(
+        slack_references.clone(),
+        default_style_class.to_string(),
+        highlight_style_class.to_string(),
+    );
+    render_slack_mrkdwn_as_html(text, &renderer)
+}
+
 pub fn render_blocks_as_html(
     blocks: Vec<SlackBlock>,
     slack_references: SlackReferences,
@@ -1767,6 +1784,46 @@ mod tests {
                 render(blocks, SlackReferences::default()),
                 "<p>:unknown_emoji:</p>\n"
             );
+        }
+    }
+
+    mod render_slack_mrkdwn_text {
+        use super::*;
+
+        #[test]
+        fn test_link_rendered_as_html() {
+            let result = render_slack_mrkdwn_text_as_html(
+                "Check <https://example.com|this link>",
+                &SlackReferences::default(),
+                "text-primary",
+                "text-warning",
+            );
+            assert_eq!(
+                result,
+                "Check <a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com\">this link</a>"
+            );
+        }
+
+        #[test]
+        fn test_bold_and_code() {
+            let result = render_slack_mrkdwn_text_as_html(
+                "*bold* and `code`",
+                &SlackReferences::default(),
+                "text-primary",
+                "text-warning",
+            );
+            assert_eq!(result, "<strong>bold</strong> and <code>code</code>");
+        }
+
+        #[test]
+        fn test_plain_text_escaped() {
+            let result = render_slack_mrkdwn_text_as_html(
+                "a & b",
+                &SlackReferences::default(),
+                "text-primary",
+                "text-warning",
+            );
+            assert_eq!(result, "a &amp; b");
         }
     }
 }
