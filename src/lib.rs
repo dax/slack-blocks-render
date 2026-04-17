@@ -18,8 +18,7 @@
 //! use slack_blocks_render::{render_blocks_as_markdown, SlackReferences};
 //!
 //! let blocks: Vec<SlackBlock> = vec![
-//!     SlackBlock::RichText(serde_json::json!({
-//!         "type": "rich_text",
+//!     SlackBlock::RichText(serde_json::from_value(serde_json::json!({
 //!         "elements": [
 //!             {
 //!                 "type": "rich_text_section",
@@ -31,7 +30,7 @@
 //!                 ]
 //!             },
 //!         ]
-//!     })),
+//!     })).unwrap()),
 //! ];
 //! let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default(), None);
 //! ```
@@ -47,8 +46,7 @@
 //! };
 //!
 //! let blocks: Vec<SlackBlock> = vec![
-//!     SlackBlock::RichText(serde_json::json!({
-//!         "type": "rich_text",
+//!     SlackBlock::RichText(serde_json::from_value(serde_json::json!({
 //!         "elements": [
 //!             {
 //!                 "type": "rich_text_section",
@@ -64,12 +62,12 @@
 //!                 "elements": [
 //!                     {
 //!                         "type": "user",
-//!                         "text": "U123456"
+//!                         "user_id": "U123456"
 //!                     }
 //!                 ]
 //!             },
 //!         ]
-//!     })),
+//!     })).unwrap()),
 //! ];
 //! // First, extract Slack references from the blocks
 //! let slack_references = find_slack_references_in_blocks(&blocks);
@@ -89,6 +87,9 @@ pub mod markdown;
 pub mod references;
 pub mod text;
 pub mod visitor;
+
+#[cfg(test)]
+pub(crate) mod test_utils;
 
 pub use html::render_blocks_as_html;
 pub use markdown::render_blocks_as_markdown;

@@ -492,6 +492,7 @@ mod tests {
     use url::Url;
 
     use super::*;
+    use crate::test_utils::rich_text_block;
 
     #[test]
     fn test_empty_input() {
@@ -773,8 +774,8 @@ Video description
         #[test]
         fn test_with_empty_json() {
             let blocks = vec![
-                SlackBlock::RichText(serde_json::json!({})),
-                SlackBlock::RichText(serde_json::json!({})),
+                rich_text_block(serde_json::json!({})),
+                rich_text_block(serde_json::json!({})),
             ];
             assert_eq!(
                 render_blocks_as_markdown(blocks, SlackReferences::default(), None),
@@ -791,7 +792,7 @@ Video description
                 #[test]
                 fn test_with_text() {
                     let blocks = vec![
-                        SlackBlock::RichText(serde_json::json!({
+                        rich_text_block(serde_json::json!({
                             "type": "rich_text",
                             "elements": [
                                 {
@@ -822,7 +823,7 @@ Video description
                                 }
                             ]
                         })),
-                        SlackBlock::RichText(serde_json::json!({
+                        rich_text_block(serde_json::json!({
                             "type": "rich_text",
                             "elements": [
                                 {
@@ -863,7 +864,7 @@ Video description
 
                 #[test]
                 fn test_with_text_with_newline() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -889,7 +890,7 @@ Video description
 
                 #[test]
                 fn test_with_text_with_newline_char() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -911,7 +912,7 @@ Video description
 
                 #[test]
                 fn test_with_text_with_only_newline() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -933,7 +934,7 @@ Video description
 
                 #[test]
                 fn test_with_bold_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -958,7 +959,7 @@ Video description
 
                 #[test]
                 fn test_with_consecutive_bold_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -997,7 +998,7 @@ Video description
 
                 #[test]
                 fn test_with_italic_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1022,7 +1023,7 @@ Video description
 
                 #[test]
                 fn test_with_consecutive_italic_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1061,7 +1062,7 @@ Video description
 
                 #[test]
                 fn test_with_strike_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1086,7 +1087,7 @@ Video description
 
                 #[test]
                 fn test_with_consecutive_strike_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1125,7 +1126,7 @@ Video description
 
                 #[test]
                 fn test_with_code_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1150,7 +1151,7 @@ Video description
 
                 #[test]
                 fn test_with_consecutive_code_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1182,7 +1183,7 @@ Video description
 
                 #[test]
                 fn test_with_styled_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1209,7 +1210,7 @@ Video description
 
                 #[test]
                 fn test_with_consecutive_styled_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1257,7 +1258,7 @@ Video description
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "~_*📈Hello World!*_~".to_string()
+                        "📈~_*Hello World!*_~".to_string()
                     );
                 }
             }
@@ -1267,7 +1268,7 @@ Video description
 
                 #[test]
                 fn test_with_channel_id() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1289,7 +1290,7 @@ Video description
 
                 #[test]
                 fn test_with_channel_id_and_reference() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1325,7 +1326,7 @@ Video description
 
                 #[test]
                 fn test_with_user_id() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1347,7 +1348,7 @@ Video description
 
                 #[test]
                 fn test_with_user_id_and_custom_delimiter() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1373,7 +1374,7 @@ Video description
 
                 #[test]
                 fn test_with_user_id_and_reference() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1405,7 +1406,7 @@ Video description
 
                 #[test]
                 fn test_with_user_id_and_reference_and_custom_delimiter() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1441,7 +1442,7 @@ Video description
 
                 #[test]
                 fn test_with_usergroup_id() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1463,7 +1464,7 @@ Video description
 
                 #[test]
                 fn test_with_usergroup_id_and_custom_delimiter() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1489,7 +1490,7 @@ Video description
 
                 #[test]
                 fn test_with_usergroup_id_and_reference() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1521,7 +1522,7 @@ Video description
 
                 #[test]
                 fn test_with_usergroup_id_and_reference_and_custom_delimiter() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1557,7 +1558,7 @@ Video description
 
                 #[test]
                 fn test_with_url() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1574,13 +1575,13 @@ Video description
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "[example](https://example.com)".to_string()
+                        "[example](https://example.com/)".to_string()
                     );
                 }
 
                 #[test]
                 fn test_with_url_without_text() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1596,7 +1597,7 @@ Video description
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "[https://example.com](https://example.com)".to_string()
+                        "[https://example.com/](https://example.com/)".to_string()
                     );
                 }
             }
@@ -1606,7 +1607,7 @@ Video description
 
                 #[test]
                 fn test_with_emoji() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1628,7 +1629,7 @@ Video description
 
                 #[test]
                 fn test_with_emoji_with_skin_tone() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1650,7 +1651,7 @@ Video description
 
                 #[test]
                 fn test_with_emoji_with_unknown_skin_tone() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1672,7 +1673,7 @@ Video description
 
                 #[test]
                 fn test_with_unknown_emoji() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1694,7 +1695,7 @@ Video description
 
                 #[test]
                 fn test_with_unknown_emoji_with_slack_reference_alias() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1726,7 +1727,7 @@ Video description
 
                 #[test]
                 fn test_with_unknown_emoji_with_slack_reference_alias_to_custom_emoji() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1768,7 +1769,7 @@ Video description
 
                 #[test]
                 fn test_with_unknown_emoji_with_slack_reference_image_url() {
-                    let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                    let blocks = vec![rich_text_block(serde_json::json!({
                         "type": "rich_text",
                         "elements": [
                             {
@@ -1807,7 +1808,7 @@ Video description
 
             #[test]
             fn test_with_ordered_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1844,7 +1845,7 @@ Video description
 
             #[test]
             fn test_with_nested_ordered_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1919,7 +1920,7 @@ Video description
 
             #[test]
             fn test_with_bullet_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1957,7 +1958,7 @@ Video description
 
         #[test]
         fn test_with_nested_bullet_list() {
-            let blocks = vec![SlackBlock::RichText(serde_json::json!({
+            let blocks = vec![rich_text_block(serde_json::json!({
                 "type": "rich_text",
                 "elements": [
                     {
@@ -2035,7 +2036,7 @@ Video description
 
             #[test]
             fn test_with_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -2061,7 +2062,7 @@ Video description
 
             #[test]
             fn test_with_text_and_newline() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -2083,7 +2084,7 @@ Video description
 
             #[test]
             fn test_with_preformatted_text_followed_by_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -2118,7 +2119,7 @@ Video description
 
             #[test]
             fn test_with_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -2144,7 +2145,7 @@ Video description
 
             #[test]
             fn test_with_quoted_text_followed_by_quoted_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -2175,7 +2176,7 @@ Video description
 
             #[test]
             fn test_with_quoted_text_followed_by_non_quoted_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {

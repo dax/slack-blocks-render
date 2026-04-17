@@ -211,10 +211,11 @@ fn find_slack_references_in_rich_text_section_element(
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::test_utils::rich_text_block;
 
     #[test]
     fn test_find_slack_references_with_user_id() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -239,7 +240,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_usergroup_id() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -264,7 +265,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_channel_id() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -289,7 +290,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_multiple_references() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -362,7 +363,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_known_emoji() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -384,7 +385,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_known_skinned_emoji() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {
@@ -406,7 +407,7 @@ mod test {
 
     #[test]
     fn test_find_slack_references_with_unknown_emoji() {
-        let blocks = vec![SlackBlock::RichText(serde_json::json!({
+        let blocks = vec![rich_text_block(serde_json::json!({
             "type": "rich_text",
             "elements": [
                 {

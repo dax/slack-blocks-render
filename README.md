@@ -29,8 +29,7 @@ use slack_morphism::prelude::*;
 use slack_blocks_render::{render_blocks_as_markdown, SlackReferences};
 
 let blocks: Vec<SlackBlock> = vec![
-    SlackBlock::RichText(serde_json::json!({
-        "type": "rich_text",
+    SlackBlock::RichText(serde_json::from_value(serde_json::json!({
         "elements": [
             {
                 "type": "rich_text_section",
@@ -42,7 +41,7 @@ let blocks: Vec<SlackBlock> = vec![
                 ]
             },
         ]
-    })),
+    })).unwrap()),
 ];
 let markdown_text = render_blocks_as_markdown(blocks, SlackReferences::default(), None);
 ```
@@ -59,8 +58,7 @@ use slack_blocks_render::{
 };
 
 let blocks: Vec<SlackBlock> = vec![
-    SlackBlock::RichText(serde_json::json!({
-        "type": "rich_text",
+    SlackBlock::RichText(serde_json::from_value(serde_json::json!({
         "elements": [
             {
                 "type": "rich_text_section",
@@ -76,12 +74,12 @@ let blocks: Vec<SlackBlock> = vec![
                 "elements": [
                     {
                         "type": "user",
-                        "text": "U123456"
+                        "user_id": "U123456"
                     }
                 ]
             },
         ]
-    })),
+    })).unwrap()),
 ];
 // First, extract Slack references from the blocks
 let slack_references = find_slack_references_in_blocks(&blocks);

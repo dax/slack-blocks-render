@@ -754,6 +754,7 @@ mod tests {
     use url::Url;
 
     use super::*;
+    use crate::test_utils::rich_text_block;
 
     fn render(blocks: Vec<SlackBlock>, refs: SlackReferences) -> String {
         render_blocks_as_html(blocks, refs, "text-primary", "text-accent")
@@ -943,7 +944,7 @@ mod tests {
 
         #[test]
         fn test_with_empty_json() {
-            let blocks = vec![SlackBlock::RichText(serde_json::json!({}))];
+            let blocks = vec![rich_text_block(serde_json::json!({}))];
             assert_eq!(render(blocks, SlackReferences::default()), "");
         }
 
@@ -952,7 +953,7 @@ mod tests {
 
             #[test]
             fn test_with_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -979,7 +980,7 @@ mod tests {
 
             #[test]
             fn test_with_text_with_newline() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -998,7 +999,7 @@ mod tests {
 
             #[test]
             fn test_with_text_with_only_newline() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1014,7 +1015,7 @@ mod tests {
 
             #[test]
             fn test_with_bold_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1033,7 +1034,7 @@ mod tests {
 
             #[test]
             fn test_with_consecutive_bold_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1054,7 +1055,7 @@ mod tests {
 
             #[test]
             fn test_with_italic_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1073,7 +1074,7 @@ mod tests {
 
             #[test]
             fn test_with_strike_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1092,7 +1093,7 @@ mod tests {
 
             #[test]
             fn test_with_code_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1111,7 +1112,7 @@ mod tests {
 
             #[test]
             fn test_with_all_styles() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1134,7 +1135,7 @@ mod tests {
 
             #[test]
             fn test_with_link() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1147,7 +1148,7 @@ mod tests {
                 }))];
                 assert_eq!(
                     render(blocks, SlackReferences::default()),
-                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com\">Example</a></p>\n"
+                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com/\">Example</a></p>\n"
                 );
             }
 
@@ -1160,7 +1161,7 @@ mod tests {
                     )]),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1187,7 +1188,7 @@ mod tests {
                     user_id_to_highlight: Some(SlackUserId("U123".to_string())),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1213,7 +1214,7 @@ mod tests {
                     )]),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1240,7 +1241,7 @@ mod tests {
                     usergroup_ids_to_highlight: Some(vec![SlackUserGroupId("G123".to_string())]),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1266,7 +1267,7 @@ mod tests {
                     )]),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1282,7 +1283,7 @@ mod tests {
 
             #[test]
             fn test_with_unicode_emoji() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1310,7 +1311,7 @@ mod tests {
                     )]),
                     ..SlackReferences::default()
                 };
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1333,7 +1334,7 @@ mod tests {
 
             #[test]
             fn test_with_tab_indentation() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1358,7 +1359,7 @@ mod tests {
 
             #[test]
             fn test_with_space_indentation() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1393,7 +1394,7 @@ mod tests {
 
             #[test]
             fn test_ordered_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1420,7 +1421,7 @@ mod tests {
 
             #[test]
             fn test_unordered_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1447,7 +1448,7 @@ mod tests {
 
             #[test]
             fn test_nested_ordered_list() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1489,7 +1490,7 @@ mod tests {
 
             #[test]
             fn test_preformatted() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1508,7 +1509,7 @@ mod tests {
 
             #[test]
             fn test_preformatted_with_newlines() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1531,7 +1532,7 @@ mod tests {
 
             #[test]
             fn test_quote() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
@@ -1550,7 +1551,7 @@ mod tests {
 
             #[test]
             fn test_quote_followed_by_text() {
-                let blocks = vec![SlackBlock::RichText(serde_json::json!({
+                let blocks = vec![rich_text_block(serde_json::json!({
                     "type": "rich_text",
                     "elements": [
                         {
