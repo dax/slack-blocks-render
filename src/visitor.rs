@@ -26,7 +26,10 @@ visitor!(
                 SlackBlock::RichText(rich_text_block) => visitor.visit_slack_rich_text_block(&SlackRichTextBlock { json_value: serde_json::to_value(rich_text_block).unwrap_or_default() }),
                 SlackBlock::Event(json_value) => visitor.visit_slack_event_block(&SlackEventBlock { json_value: json_value.clone() }),
                 SlackBlock::Markdown(markdown) => visitor.visit_slack_markdown_block(markdown),
-                SlackBlock::ShareShortcut(_) => todo!()
+                SlackBlock::ShareShortcut(_) => {},
+                // Table and TaskCard blocks (added in slack-morphism 2.22) carry no
+                // plain-text/markdown representation we can render, so emit nothing.
+                SlackBlock::Table(_) | SlackBlock::TaskCard(_) => {}
             }
         },
     ]
