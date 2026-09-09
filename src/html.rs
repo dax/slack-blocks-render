@@ -466,7 +466,10 @@ fn render_rich_text_section_element(
             );
             (wrap_with_styles(html, &styles), None)
         }
-        Some(Some("link")) => {
+        // `attachment_mention` (a mention of a file or a third-party app entity, ie. a Google
+        // Drive document) and `message_mention` (a mention of another Slack message) both carry
+        // a `url` and an optional display `text`, so they render as links.
+        Some(Some("link")) | Some(Some("attachment_mention")) | Some(Some("message_mention")) => {
             let Some(serde_json::Value::String(url)) = element.get("url") else {
                 return (String::new(), None);
             };
@@ -1165,7 +1168,75 @@ mod tests {
                 }))];
                 assert_eq!(
                     render(blocks, SlackReferences::default()),
-                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com/\">Example</a></p>\n"
+                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com\">Example</a></p>\n"
+                );
+            }
+
+            #[test]
+            fn test_with_attachment_mention() {
+                let blocks = vec![rich_text_block(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "attachment_mention",
+                                    "url": "https://docs.google.com/document/d/1abc/edit?tab=t.0",
+                                    "text": "Project plan",
+                                    "app_id": "A6NL8MJ6Q",
+                                    "product_name": "Google Docs"
+                                }
+                            ]
+                        }
+                    ]
+                }))];
+                assert_eq!(
+                    render(blocks, SlackReferences::default()),
+                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://docs.google.com/document/d/1abc/edit?tab=t.0\">Project plan</a></p>\n"
+                );
+            }
+
+            #[test]
+            fn test_with_attachment_mention_without_text() {
+                let blocks = vec![rich_text_block(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                { "type": "attachment_mention", "url": "https://example.com/doc" }
+                            ]
+                        }
+                    ]
+                }))];
+                assert_eq!(
+                    render(blocks, SlackReferences::default()),
+                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://example.com/doc\">https://example.com/doc</a></p>\n"
+                );
+            }
+
+            #[test]
+            fn test_with_message_mention() {
+                let blocks = vec![rich_text_block(serde_json::json!({
+                    "type": "rich_text",
+                    "elements": [
+                        {
+                            "type": "rich_text_section",
+                            "elements": [
+                                {
+                                    "type": "message_mention",
+                                    "url": "https://slack.com/archives/C123/p1788850799491249",
+                                    "text": "a previous message",
+                                    "channel_id": "C123"
+                                }
+                            ]
+                        }
+                    ]
+                }))];
+                assert_eq!(
+                    render(blocks, SlackReferences::default()),
+                    "<p><a target=\"_blank\" rel=\"noopener noreferrer\" href=\"https://slack.com/archives/C123/p1788850799491249\">a previous message</a></p>\n"
                 );
             }
 
