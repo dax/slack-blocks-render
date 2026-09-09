@@ -267,7 +267,10 @@ fn render_rich_text_section_element(
             };
             skinned_emoji.to_string()
         }
-        Some(Some("link")) => {
+        // `attachment_mention` (a mention of a file or a third-party app entity, ie. a Google
+        // Drive document) and `message_mention` (a mention of another Slack message) both carry
+        // a `url` and an optional display `text`, and render like links.
+        Some(Some("link")) | Some(Some("attachment_mention")) | Some(Some("message_mention")) => {
             let Some(serde_json::Value::String(text)) = element.get("text") else {
                 return "".to_string();
             };
@@ -967,6 +970,61 @@ Video description"#
                     assert_eq!(
                         render_blocks_as_text(blocks, SlackReferences::default()),
                         "example".to_string()
+                    );
+                }
+            }
+
+            mod attachment_mention_element {
+                use super::*;
+
+                #[test]
+                fn test_with_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "attachment_mention",
+                                        "url": "https://docs.google.com/document/d/1abc/edit?tab=t.0",
+                                        "text": "Project plan",
+                                        "product_name": "Google Docs"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_text(blocks, SlackReferences::default()),
+                        "Project plan".to_string()
+                    );
+                }
+            }
+
+            mod message_mention_element {
+                use super::*;
+
+                #[test]
+                fn test_with_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "message_mention",
+                                        "url": "https://slack.com/archives/C123/p1788850799491249",
+                                        "text": "a previous message"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_text(blocks, SlackReferences::default()),
+                        "a previous message".to_string()
                     );
                 }
             }

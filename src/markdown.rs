@@ -379,7 +379,10 @@ fn render_rich_text_section_element(
                 style,
             )
         }
-        Some(Some("link")) => {
+        // `attachment_mention` (a mention of a file or a third-party app entity, ie. a Google
+        // Drive document) and `message_mention` (a mention of another Slack message) both carry
+        // a `url` and an optional display `text`, so they render as links.
+        Some(Some("link")) | Some(Some("attachment_mention")) | Some(Some("message_mention")) => {
             let Some(serde_json::Value::String(url)) = element.get("url") else {
                 return "".to_string();
             };
@@ -1575,7 +1578,7 @@ Video description
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "[example](https://example.com/)".to_string()
+                        "[example](https://example.com)".to_string()
                     );
                 }
 
@@ -1597,7 +1600,117 @@ Video description
                     }))];
                     assert_eq!(
                         render_blocks_as_markdown(blocks, SlackReferences::default(), None),
-                        "[https://example.com/](https://example.com/)".to_string()
+                        "[https://example.com](https://example.com)".to_string()
+                    );
+                }
+            }
+
+            mod attachment_mention_element {
+                use super::*;
+
+                #[test]
+                fn test_with_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "attachment_mention",
+                                        "url": "https://docs.google.com/document/d/1abc/edit?tab=t.0",
+                                        "text": "Project plan",
+                                        "app_id": "A6NL8MJ6Q",
+                                        "entity_id": "W:A6NL8MJ6Q:1abc",
+                                        "icon_url": "https://a.slack-edge.com/img/app-gdrive/icon_document.png",
+                                        "product_name": "Google Docs",
+                                        "channel_id": "C08GE9NPGFK",
+                                        "ts": "1788850799.491249"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "[Project plan](https://docs.google.com/document/d/1abc/edit?tab=t.0)"
+                            .to_string()
+                    );
+                }
+
+                #[test]
+                fn test_without_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "attachment_mention",
+                                        "url": "https://example.com/doc"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "[https://example.com/doc](https://example.com/doc)".to_string()
+                    );
+                }
+            }
+
+            mod message_mention_element {
+                use super::*;
+
+                #[test]
+                fn test_with_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "message_mention",
+                                        "url": "https://slack.com/archives/C123/p1788850799491249",
+                                        "text": "a previous message",
+                                        "channel_id": "C123",
+                                        "author_id": "U123",
+                                        "message_ts": "1788850799.491249"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "[a previous message](https://slack.com/archives/C123/p1788850799491249)"
+                            .to_string()
+                    );
+                }
+
+                #[test]
+                fn test_without_text() {
+                    let blocks = vec![rich_text_block(serde_json::json!({
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_section",
+                                "elements": [
+                                    {
+                                        "type": "message_mention",
+                                        "url": "https://slack.com/archives/C123/p1788850799491249"
+                                    }
+                                ]
+                            }
+                        ]
+                    }))];
+                    assert_eq!(
+                        render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+                        "[https://slack.com/archives/C123/p1788850799491249](https://slack.com/archives/C123/p1788850799491249)"
+                            .to_string()
                     );
                 }
             }

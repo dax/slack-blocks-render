@@ -27,9 +27,16 @@ visitor!(
                 SlackBlock::Event(json_value) => visitor.visit_slack_event_block(&SlackEventBlock { json_value: json_value.clone() }),
                 SlackBlock::Markdown(markdown) => visitor.visit_slack_markdown_block(markdown),
                 SlackBlock::ShareShortcut(_) => {},
-                // Table and TaskCard blocks (added in slack-morphism 2.22) carry no
-                // plain-text/markdown representation we can render, so emit nothing.
-                SlackBlock::Table(_) | SlackBlock::TaskCard(_) => {}
+                // Alert blocks (added in slack-morphism 2.23) carry a single text field.
+                SlackBlock::Alert(alert) => visitor.visit_slack_block_text(&alert.text),
+                // Table and TaskCard blocks (added in slack-morphism 2.22), Card, Carousel
+                // and ContextActions blocks (added in 2.23) carry no plain-text/markdown
+                // representation we can render, so emit nothing.
+                SlackBlock::Table(_)
+                | SlackBlock::TaskCard(_)
+                | SlackBlock::Card(_)
+                | SlackBlock::Carousel(_)
+                | SlackBlock::ContextActions(_) => {}
             }
         },
     ]
