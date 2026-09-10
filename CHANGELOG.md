@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3](https://github.com/dax/slack-blocks-render/compare/v0.5.2...v0.5.3) - 2026-09-10
+
+### Added
+
+- render attachment_mention and message_mention rich text elements
+
 
 ## [0.5.2](https://github.com/dax/slack-blocks-render/compare/v0.5.1...v0.5.2) - 2026-05-30
 
