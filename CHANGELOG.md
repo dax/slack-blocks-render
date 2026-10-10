@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4](https://github.com/dax/slack-blocks-render/compare/v0.5.3...v0.5.4) - 2026-10-10
+
+### Added
+
+- support slack-morphism 2.31 blocks
+
 ## [0.5.3](https://github.com/dax/slack-blocks-render/compare/v0.5.2...v0.5.3) - 2026-09-10
 
 ### Added
