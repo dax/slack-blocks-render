@@ -37,6 +37,20 @@ visitor!(
                 | SlackBlock::Card(_)
                 | SlackBlock::Carousel(_)
                 | SlackBlock::ContextActions(_) => {}
+                // Container blocks (added in slack-morphism 2.30) wrap other blocks:
+                // render their children so the content they hold is not lost.
+                SlackBlock::Container(container) => {
+                    for child_block in &container.child_blocks {
+                        visitor.visit_slack_block(child_block);
+                    }
+                }
+                // Plan, DataTable and DataVisualization blocks (added in 2.30) carry no
+                // plain-text/markdown representation we can render, and Unknown keeps any
+                // block type slack-morphism does not model as raw JSON, so emit nothing.
+                SlackBlock::Plan(_)
+                | SlackBlock::DataTable(_)
+                | SlackBlock::DataVisualization(_)
+                | SlackBlock::Unknown(_) => {}
             }
         },
     ]

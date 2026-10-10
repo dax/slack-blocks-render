@@ -545,9 +545,9 @@ mod tests {
         // No rendering
         let blocks = vec![SlackBlock::Input(SlackInputBlock::new(
             "label".into(),
-            SlackInputBlockElement::PlainTextInput(SlackBlockPlainTextInputElement::new(
-                "id".into(),
-            )),
+            SlackInputBlockElement::PlainTextInput(
+                SlackBlockPlainTextInputElement::new().with_action_id("id".into()),
+            ),
         ))];
         assert_eq!(
             render_blocks_as_markdown(blocks, SlackReferences::default(), None),
@@ -622,6 +622,36 @@ Video description
         assert_eq!(
             render_blocks_as_markdown(blocks, SlackReferences::default(), None),
             "".to_string()
+        );
+    }
+
+    #[test]
+    fn test_with_unrendered_blocks() {
+        // Plan and DataTable blocks, and block types slack-morphism does not model
+        let blocks: Vec<SlackBlock> = serde_json::from_value(serde_json::json!([
+            { "type": "plan", "title": "Plan", "tasks": [] },
+            { "type": "data_table", "caption": "Caption", "rows": [] },
+            { "type": "some_future_block", "text": "Text" }
+        ]))
+        .unwrap();
+        assert!(matches!(blocks[0], SlackBlock::Plan(_)));
+        assert!(matches!(blocks[2], SlackBlock::Unknown(_)));
+        assert_eq!(
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+            "".to_string()
+        );
+    }
+
+    #[test]
+    fn test_with_container() {
+        let blocks = vec![SlackBlock::Container(SlackContainerBlock::new(vec![
+            SlackBlock::Section(SlackSectionBlock::new().with_text(SlackBlockText::Plain(
+                SlackBlockPlainText::new("Text".to_string()),
+            ))),
+        ]))];
+        assert_eq!(
+            render_blocks_as_markdown(blocks, SlackReferences::default(), None),
+            "Text".to_string()
         );
     }
 
